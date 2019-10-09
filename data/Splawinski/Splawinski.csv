@@ -1,0 +1,13 @@
+,EN,PG,note
+a,163400,35097,Greene and Johnson 1999
+b,0.58,1,Zasada 1979
+c,0.95,0.86,Greene and Johnson 1999
+a1,17.84,2.05,Scale parameter - Splawinski et al 2014 eq. 1
+b1,0.633,0.472,Shape parameter - Splawinski et al 2014 eq. 1
+m,0.0012,0.0045,Seed mass -  - Splawinski et al. Eq. 2
+b2,0.43,0.43,Cumulative survivorship b - Splawinski et al. Eq. 2
+d,0.76,0.76,Cumulative survivorship d - Splawinski et al. Eq. 2
+fl,1.83,1.83,Cumulative survivorship fL - Splawinski et al. Eq. 2
+fh,0.33,0.33,Cumulative survivorship fH - Splawinski et al. Eq. 2
+g,0.43,0.43,Cumulative survivorship granivory  first  3 years - Splawinski et al. Eq. 2
+td,0.91,1,Proportion abscissed @ 72 months
