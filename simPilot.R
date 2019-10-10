@@ -5,7 +5,10 @@
 ### setwd("C:/Users/dcyr-z840/Sync/Travail/ECCC/regenFailureRiskAssessment_phase3")
 rm(list = ls())
 home <- path.expand("~")
+#home <- normalizePath(home)
+home <- gsub("\\\\", "/", home) # necessary on some Windows machine
 home <- gsub("/Documents", "", home) # necessary on my Windows machine
+print(home)
 setwd(paste(home, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3/", sep ="/"))
 ####################################################################################################
 ####################################################################################################

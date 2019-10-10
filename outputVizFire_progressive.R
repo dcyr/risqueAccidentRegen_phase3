@@ -3,7 +3,7 @@
 ##### Visualizing fire simulations
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
 rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario"))])
-# setwd("D:/regenFailureRiskAssessmentData_phase2/2018-10-23")
+# setwd("D:/regenFailureRiskAssessmentData_phase3/2019-10-09")
 # wwd <- paste(getwd(), Sys.Date(), sep = "/")
 # dir.create(wwd)
 # setwd(wwd)
@@ -98,5 +98,8 @@ fcSummary <- outputSummary %>%
     summarize(realizedFC_median = median(fireCycle),
               realizedFC_mean = 1/mean(propAAB)) %>%
     merge(fireRegimeSummary, all.x = T ) %>%
-    merge(fireZoneArea)
+    merge(fireZoneArea) %>%
+    filter(Zone_LN == 'total') %>%
+    select(period, realizedFC_median, realizedFC_mean, fireCycle)
 
+### plot
