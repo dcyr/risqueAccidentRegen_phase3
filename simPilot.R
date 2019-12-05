@@ -33,14 +33,13 @@ source("../initHarvest.R")
 save(managementPlan, file = "managementPlan.RData")
 ## Sourcing fire engine & Loading fire regime(s)
 source("../initFireRegime.R")
-
-
 ## Loading regeneration module
 source("../scripts/regenDensityPredictFnc.R")
 ## Loading yield curves (and other forestry equations)
 psDir <- "../data/Pothier-Savard"
 source(paste(psDir, "Pothier-Savard.R", sep = "/"))
-
+## Loading yield curves (and other forestry equations)
+source("../scripts/standAttribExtract.R")
 
 ####################################################################################################
 ####################################################################################################
@@ -49,7 +48,7 @@ IDR100Init <- IDR100
 ####################################################################################################
 ####################################################################################################
 
-nRep <- 1000
+nRep <- 10
 simDuration <- 150
 simStartYear <- 2015
 scen <- "RCP85"
@@ -67,7 +66,7 @@ dir.create(outputDir)
 cl = makeCluster(clusterN, outfile = "") ##
 registerDoSNOW(cl)
 
-foreach(i = 0:100,
+foreach(i = 0:7,
        .packages= names(sessionInfo()$otherPkgs)) %dopar%  {
     
 
@@ -127,22 +126,36 @@ foreach(i = 0:100,
     ageRef[is.na(coverTypes)] <- NA
     ageRef[] <- plan$ageRef[values(ageRef)]
     
+    ############################################################################
     
     ## initial volume at 120 years old for eligible stands
     #
     iqs <- IQS_POT[index]
     sp <- coverTypes_RAT[match(coverTypes[index], coverTypes_RAT$ID), "value"]
     a <- tsdInit[index]
-    Ac <- ageRef[index] - t1[index]
+    ageRefCorr <- ageRef[index] - t1[index]
+    Ac <- a - t1[index] 
     r100 <- IDR100[index]
     ##
-    volAt120 <- coverTypes
-    volAt120[] <- NA
-    volAt120[index] <- VFnc(sp = sp, Ac = Ac, iqs = iqs, rho100 = r100,
+    volAt120 <- volInit <- coverTypes
+    volAt120[] <- volInit[] <- NA
+    volAt120[index] <- VFnc(sp = sp, Ac = ageRefCorr, iqs = iqs, rho100 = r100,
+                            rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef, DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
+                            scenesCoef = NULL, withSenescence = F)
+    ## current volume 
+    volInit[index] <- VFnc(sp = sp, Ac = Ac, iqs = iqs, rho100 = r100,
                             rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef, DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
                             scenesCoef = NULL, withSenescence = F)
     
+    ## Basal area set aside in case of retention cut
+    stSetAside <- volSetAside <- coverTypes  
+    stSetAside[!is.na(stSetAside)] <- volSetAside[!is.na(volSetAside)] <- 0
+    
+    writeRaster(volAt120, file = "volAt120.tif", overwrite = T)
+    writeRaster(volInit, file = "volInit.tif", overwrite = T)
+    
     rm(iqs, sp, a, Ac, r100)
+    
     ## creating raster stacks by UAFs
     uR <- uSp <- uThresh <- uProd <- list()
     for (u in plan$uaf) {
@@ -170,10 +183,11 @@ foreach(i = 0:100,
     
     
     ## variable stand attributes (stored)
-    fire <- harv <- age <- salv <- rho100 <- list()
+    fire <- harv <- age <- salv <- plant <- rho100 <- vReten <- vHarv <- list()
     fr <- filter(fireRegime, scenario == scen)
-    for (y in 1:simDuration) {### change into foreach, and return 'fire' 'harv' and 'age' as a list, then reformat
+    for (y in 1:150) {#simDuration) {### change into foreach, and return 'fire' 'harv' and 'age' as a list, then reformat
         
+
         ####################### simulating fire
         
         f <- simFire(tsfInit = tsd, simDur = 1, yearInit = simStartYear + y,
@@ -195,80 +209,57 @@ foreach(i = 0:100,
         ####################### computing pre-fire stand attributes 
         ### focussing on burned cells 
         index <- which(values(f & studyArea & coverTypes %in% plan$comSppId[["SEPM"]]))
-       
-    
-        iqs <- IQS_POT[index]
-        a <- tsd[index]
-        sp <- coverTypes_RAT[match(coverTypes[index], coverTypes_RAT$ID), "value"]
-        r100 <- IDR100[index]
-        
+        ###
+        iqs <- iqs_extract()
+        a <- age_extract()
+        sp <- sp_extract()
+        r100 <- IDR100_extract()
         ## age at 1m
-        Ac <- round(a - tFnc(sp = sp,
-                       iqs = iqs,
-                       tCoef = tCoef))
         
-        Ac[iqs == 0] <- 0
-        ## capping Ac at 150
-        Ac[Ac>150] <- 150
-      
-        
-        ## basal area (all diameters, Ac >= 25)
-        g <- GFnc(sp = sp, Ac = Ac, iqs = iqs, rho100 = r100,
-                  HdCoef = HdCoef, GCoef = GCoef, rho100Coef = rho100Coef,
-                  withSenescence = F, DqCoef = DqCoef, merchantable = F)
-        
-        ## basal area (all diameters, approximation for stands with Ac < 25)
-        ageIndex <- which(Ac < 25)
-        
-        if(length(ageIndex) > 1) {
-            # x <- Ac[ageIndex]/25 *
-            #     GFnc(sp = sp[ageIndex], Ac = 25, iqs = iqs[ageIndex],
-            #          rho100 = r100[ageIndex],
-            #          HdCoef = HdCoef, GCoef = GCoef,
-            #          rho100Coef = rho100Coef, scenesCoef = NULL, withSenescence = F,
-            #          DqCoef = DqCoef, merchantable = F)
-            # 
+        Ac <- ac_extract(a = a,
+                         sp = sp,
+                         iqs = iqs,
+                         tCoef = tCoef,
+                         tFnc = tFnc,
+                         cap = 150)
+        Hd <- HdFnc(sp, Ac, iqs, HdCoef)
+        if(length(index > 0)) {
             
-            x <- #Ac[ageIndex]/25 *
-                GFnc(sp = sp[ageIndex], Ac = 25, iqs = iqs[ageIndex],
-                     rho100 = r100[ageIndex],
-                     HdCoef = HdCoef, GCoef = GCoef,
-                     rho100Coef = rho100Coef, scenesCoef = NULL, withSenescence = F,
-                     DqCoef = DqCoef, merchantable = F) - 
-                (25-Ac[ageIndex]) *
-                (GFnc(sp = sp[ageIndex], Ac = 26, iqs = iqs[ageIndex],
-                      rho100 = r100[ageIndex],
-                      HdCoef = HdCoef, GCoef = GCoef,
-                      rho100Coef = rho100Coef, scenesCoef = NULL, withSenescence = F,
-                      DqCoef = DqCoef, merchantable = F) - 
-                     GFnc(sp = sp[ageIndex], Ac = 25, iqs = iqs[ageIndex],
-                          rho100 = r100[ageIndex],
-                          HdCoef = HdCoef, GCoef = GCoef,
-                          rho100Coef = rho100Coef, scenesCoef = NULL, withSenescence = F,
-                          DqCoef = DqCoef, merchantable = F))
-
-            x[x<0] <- 0
-            g[ageIndex] <- x
-            
+            ## basal area (all diameters, Ac >= 25)
+            g <- g_extract(sp,
+                         Ac,
+                         iqs,
+                         rho100 = r100,
+                         HdCoef,
+                         GCoef,
+                         rho100Coef,
+                         withSenescence,
+                         DqCoef,
+                         merchantable)
+            ## merchantable volume 
+            v <- VFnc(sp = sp, Ac = Ac, iqs = iqs, rho100 = r100,
+                    rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef, DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
+                    scenesCoef = NULL, withSenescence = F)
+            v[g == 0] <- 0
+        } else {
+            g <- v <- Ac
         }
-
-        
-        ################################################################################
-        
-        ## merchantable volume 
-        v <- VFnc(sp = sp, Ac = Ac, iqs = iqs, rho100 = r100,
-                  rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef, DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
-                  scenesCoef = NULL, withSenescence = F)
         
         ####################### Salvage logging
         
         salvageIndex <- index[which(v > plan$salvageEligibility$`SEPM`)]
         ## indentifying those eligible to harvest
-        eligibleToSalvage <- which(values(sum(spEligible, na.rm = T)) == 1)
+        eligibleToSalvage <- which(values(sum(spEligible, na.rm = T)) >= 1)
         salvageIndex <- salvageIndex[salvageIndex %in% eligibleToSalvage]
         ## salvaging only the allowed proportion
+        ########################
+        ## determining the number of cells to harvest
+        nCell <- min(length(salvageIndex) * plan$salvageTargetStandProp$SEPM,
+                     plan$targetHarvestLevels$SEPM / plan$salvageWoodPropLost$SEPM *
+                       sum(values(spEligible[[u]]), na.rm = T))
+        nCell <- round(nCell)
         salvageIndex <- sample(salvageIndex,
-                               size = length(salvageIndex) * plan$salvageTargetStandProp$SEPM)
+                               size = nCell)
         
         s <- studyArea
         s[] <- NA
@@ -279,63 +270,78 @@ foreach(i = 0:100,
         
         ####################### simulating regeneration density
         
-        ## seedling density
-        seedlingDens <- seedlingFnc(sp = sp, Ac = Ac, G = g, iqs = iqs, seedCoef = seedCoef, tCoef = tCoef)
+        ## applying minimum basal area based on what has been set aside in previous harvesting
+        retentionIndex <- which(stSetAside[index] > 0)
+        g <- apply(data.frame(g, stSetAside[index]), 1, function(x) max(x, na.rm = T))
         
-        ## work with is.na(seedlingDens==F)
+        ## consider stand with retention harvesting fully mature
+        AcEffective <- Ac
+        AcEffective[retentionIndex] <- 100
+        
+        ## natural regen seedling density
+        seedlingDens <- seedlingFnc(sp = sp, Ac = AcEffective, G = g, iqs = iqs,
+                                    seedCoef = seedCoef, tCoef = tCoef)
+        
+        ## post-salvage plantation (if applicable)
+        if(plan$salvagePlantation) {
+            indexSalvPlant <- which(index %in% salvageIndex &
+                                      seedlingDens < plan$plantationThreshold)
+            
+            seedlingDens[indexSalvPlant] <-  seedlingDens[indexSalvPlant] + plan$plantationDensity
+        }
+        
+        ## work with is.na(seedlingDens==F) (covertypes other than EN and PG produce NAs)
         x <- rep(NA, length(seedlingDens))
         indexSeedlings <- !is.na(seedlingDens)
+
         
         ## converting seedling density to new relative density
         x[indexSeedlings] <- doQmapQUANT(x = seedlingDens[indexSeedlings], fobj = seedlingQMapFit, type = "linear")
         x <- round(x, 3)
-        ## setting seedling density in cells with cells 
         
-        ####################### updating relative density, only when stands were not salvaged
-        ## (here we assume that salvaged stands are put back to their former density)
+        ## store planted sites (post-salvage)
+        p <- studyArea
+        p[] <- NA
+        p[index[indexSalvPlant]] <- 1
+        
+        plant[[y]] <- p
         
         ## updating rho100 and volAt120 in each burned cell
         IDR100[index] <- x
-        
-        ### new vol at 120
-        v120 <- VFnc(sp = sp, Ac = ageRef[index]-t1[index], iqs = iqs, rho100 = x,
-                     rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef, DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
-                     scenesCoef = NULL, withSenescence = F)
-        
-        
-        volAt120[index] <- v120
-        
-        
-        
-        ## keeping best value for salvaged stands (assume no decrease in relative density)
-        ## relative density
-        indexMaintained <- which(index %in% salvageIndex)
-        x <- cbind(r100[indexMaintained], # former value
-                    x[indexMaintained]) ## new value
-        x <- apply(x, 1, function(x) max(x, na.rm = T))
-        IDR100[salvageIndex] <- x
-        ## corresponding volume at 120
-        volAt120[salvageIndex] <- VFnc(sp = sp[indexMaintained],
-                                       Ac = ageRef[salvageIndex]-t1[salvageIndex],
-                                       iqs = iqs[indexMaintained], rho100 = x,
-                                       rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef, DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
-                                       scenesCoef = NULL, withSenescence = F)
-        
         ## storing updated relative density
         rho100[[y]] <- IDR100
+        
+        ### new vol at 120
+        v120 <- VFnc(sp = sp, Ac = ageRef[index]-t1[index],
+                     iqs = iqs, rho100 = x,
+                     rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef,
+                     DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
+                     scenesCoef = NULL, withSenescence = F)
+      
+        if(y == 1) {
+            volAt120 <- list(volAt120)
+            volAt120[[y]][index] <- v120
+        } else {
+            volAt120[[y]] <- volAt120[[y-1]]
+            volAt120[[y]][index] <- v120
+        } 
         
         # ##saving volAt120 for testing purposes
         # save(v120, file = paste0(outputDir, "v120_", y, ".RData"))
         # ## saving IDR100 for testing purposes
         # save(IDR100, file = paste0(outputDir, "IDR100_", y, ".RData"))
-    
+        # ## saving IDR100 for testing purposes
+        # save(p, file = paste0(outputDir, "salvPlant_", y, ".RData"))
+        # 
         ####################### updating tsd (do after updating density)
         tsd[f] <- 0
+        #######################  resetting burned stands to 0 basal area
+        stSetAside[index] <- 0
         
         
+        ########################################################################
         ####################### simulating harvest
-        #### Modifier les cibles de récolte en fonction des superficies récupérées
-        #######################################        #######################################
+        ########################################################################
         
         print(paste0("simulating harvests ; sim ", simID, " ; year ", y))
 
@@ -343,11 +349,9 @@ foreach(i = 0:100,
         rm(f)
         h[] <- NA
         ## 
-        
-
-        ##### eligible to harvest at a given timestep
+                ##### eligible to harvest at a given timestep
         eligible <- tsd > matThresh &
-            volAt120 >= volMinAt120
+            volAt120[[y]] >= volMinAt120
             ##dens %in% dens_RAT[which(dens_RAT$value %in% densProd), "ID"]  ## 
         
         x <- numeric() ## vector of cells to be harvested
@@ -380,15 +384,112 @@ foreach(i = 0:100,
                 index <- which(values(eligible[[u]]))
                 ## sampling cells
                 x <- append(x, sample(index, size = min(length(index), nCell)))
+                
             }
-
         }
+        
         h[x] <- 1
+        
+        
+        ################ stand attributes focussing on harvested stands
+        ### 
+        iqs <- iqs_extract(stands = x)
+        a <- age_extract(stands = x)
+        sp <- sp_extract(stands = x)
+        t1 <- round(tFnc(sp, iqs, tCoef))
+        r100 <- IDR100_extract(stands = x)
+        ## age at 1m
+        
+        Ac <- ac_extract(a = a,
+                         sp = sp,
+                         iqs = iqs,
+                         tCoef = tCoef,
+                         tFnc = tFnc,
+                         cap = 150)
+        Hd <- HdFnc(sp, Ac, iqs, HdCoef)
+        
+        if(length(x > 0)) {
+          
+          ## basal area (all diameters, Ac >= 25)
+            g <- g_extract(sp,
+                         Ac,
+                         iqs,
+                         rho100 = r100,
+                         HdCoef,
+                         GCoef,
+                         rho100Coef,
+                         withSenescence = F,
+                         DqCoef,
+                         merchantable = T)
+          
+            ## standing merchantable volume 
+            v <- VFnc(sp = sp, Ac = Ac, iqs = iqs, rho100 = r100,
+                      rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef, DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
+                      scenesCoef = NULL, withSenescence = F)
+            
+            
+            
+            if(plan$retentionCut) {
+                ### what would be the basal area needed to regenerate at retentionCutTarget if 
+                    #  that stands burned 
+                
+                ### scan levels of retention to assure 50 cubic-m at 120 yrs old in case of fire (brute force)
+                propRetenVals <- seq(.05, 1, 0.05)
+                seedlingDensAt120 <- matrix(NA,
+                                       nrow = length(g),
+                                       ncol = length(propRetenVals))
+                
+                
+                ######################################################################################################
+                ### predicting seedling density in case of fire
+                for (j in seq_along(propRetenVals)) {
+                  seedlingDensAt120[, j] <- seedlingFnc(sp = sp, Ac = Ac,
+                                                        G = g * propRetenVals[j],
+                                                        iqs = iqs,
+                                                        seedCoef = seedCoef, tCoef = tCoef)
+                }
+                
+               
+                rho100At120 <- apply(seedlingDensAt120, 2, function(x) doQmapQUANT(x = x,
+                                                                                   fobj = seedlingQMapFit,
+                                                                                   type = "linear"))
+                
+                ### vol at 120 if retention portion burned the same year
+                v120 <- apply(rho100At120, 2, function(x) VFnc(sp = sp, Ac = Ac,
+                                                               iqs = iqs, rho100 = x,
+                                                               rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef,
+                                                               DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
+                                                               scenesCoef = NULL, withSenescence = F))
+                
+                propRetention <- propRetenVals[apply(v120, 1, function(x) min(which(x >= plan$retentionCutTarget)))]
+                propRetention[is.na(propRetention)] <- 1
+                
+                ### storing values (to be written out)
+                vReten[[y]] <- vHarv[[y]] <- h 
+                vReten[[y]][x] <-  round(propRetention * v, 1)
+                vHarv[[y]][x] <-  round(v - (propRetention * v), 1)
+                
+                ### storing values (temporary)
+                stSetAside[x] <- round(propRetention * g, 1)
+                
+            } else {
+              vHarv[[y]] <- h 
+              vHarv[[y]][x] <-  v
+            }
+            
+          
+          
+          
+          
+          v[g == 0] <- 0
+        } else {
+          g <- v <- Ac
+        }
+        
         # ### saving yearly timesteps for testing purposes
         # save(h, file = paste0(outputDir, "h_", y, ".RData"))
         ## storing harvested stands
         harv[[y]] <- h
-
         ####################### updating tsd
         tsd[h] <- 0
         
@@ -413,13 +514,20 @@ foreach(i = 0:100,
     age <- stack(age)
     rho100 <- stack(rho100)
     salv <- stack(salv)
+    plant <- stack(plant)
+    volAt120 <- stack(volAt120)
+    vHarv <- stack(vHarv)
+    vReten <- stack(vReten)
 
     save(fire, file = paste0(outputDir, "outputFire_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
     save(harv, file = paste0(outputDir, "outputHarvest_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
     save(age, file = paste0(outputDir, "outputTSD_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
     save(rho100, file = paste0(outputDir, "outputRho100_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
     save(salv, file = paste0(outputDir, "outputSalvage_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
-    
+    save(plant, file = paste0(outputDir, "outputPlantation_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
+    save(volAt120, file = paste0(outputDir, "outputVolAt120_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
+    save(vHarv, file = paste0(outputDir, "outputVolHarv_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
+    save(vReten, file = paste0(outputDir, "outputVolReten_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
     print("##############################################################")
     print("##############################################################")
     print(paste0("Simulation #", i, " completed ", Sys.time()-tStart))

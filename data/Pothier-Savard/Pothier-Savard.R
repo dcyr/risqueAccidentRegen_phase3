@@ -250,6 +250,7 @@ HdFnc <- function(sp, Ac, iqs, HdCoef) {
 
     x <- apply(df, 1, function(x)  x["b10"] + ((x["b11"]*(x["iqs"]^x["b12"])) *
                                                    (1-exp(-x["b13"]*x["Ac"]))^(x["b14"]*x["iqs"]^(-x["b15"]))))
+    x[x<0] <- 0
     return(x)
 }
 
@@ -546,6 +547,7 @@ VFnc <- function(sp, Ac, iqs, rho100,
     
     return(x)
 }
+
 # 
 # ### testing function and visualizing results
 # require(dplyr)
