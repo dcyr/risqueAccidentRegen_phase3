@@ -48,7 +48,7 @@ IDR100Init <- IDR100
 ####################################################################################################
 ####################################################################################################
 
-nRep <- 10
+nRep <- 48
 simDuration <- 150
 simStartYear <- 2015
 scen <- "RCP85"
@@ -57,18 +57,28 @@ scen <- "RCP85"
 ### actual simulation
 require(doSNOW)
 #require(parallel)
-clusterN <-  8#max(1, floor(0.98*detectCores()))  ### choose number of nodes to add to cluster.
+clusterN <- 12 #max(1, floor(0.98*detectCores()))  ### choose number of nodes to add to cluster.
 # #######
 
 outputDir <-  paste(getwd(), "output/", sep = "/")
 dir.create(outputDir)
 
-cl = makeCluster(clusterN, outfile = "") ##
+cl = makeCluster(clusterN,
+                 outfile = "") ##
 registerDoSNOW(cl)
 
-foreach(i = 0:7,
-       .packages= names(sessionInfo()$otherPkgs)) %dopar%  {
+for (i in 0:(nRep-1)) {
+# foreach(i = 0:(nRep-1),
+#        .packages= names(sessionInfo()$otherPkgs),
+#        .verbose = T) %dopar%  {
     
+         
+    ### workaround on Windows system to avoid multiple instances trying to access
+    ### the same files at the same time
+    if(i < clusterN) {
+      Sys.sleep(2*(i %% clusterN))
+    }
+         
 
     tStart <- Sys.time()
     require(stringr)
@@ -128,6 +138,7 @@ foreach(i = 0:7,
     
     ############################################################################
     
+    
     ## initial volume at 120 years old for eligible stands
     #
     iqs <- IQS_POT[index]
@@ -180,16 +191,21 @@ foreach(i = 0:7,
     names(uR) <- names(spEligible) <- names(matThresh) <- plan$uaf
     
     
-    
-    
+    ###########################
+    ###########################
+    print(paste("Simulating annual processes"))
+    ###########################
+    ###########################
+
     ## variable stand attributes (stored)
     fire <- harv <- age <- salv <- plant <- rho100 <- vReten <- vHarv <- list()
     fr <- filter(fireRegime, scenario == scen)
-    for (y in 1:150) {#simDuration) {### change into foreach, and return 'fire' 'harv' and 'age' as a list, then reformat
+    for (y in 1:simDuration) {#simDuration) {### change into foreach, and return 'fire' 'harv' and 'age' as a list, then reformat
         
-
+        
         ####################### simulating fire
-        
+        print("simulating fire")
+      
         f <- simFire(tsfInit = tsd, simDur = 1, yearInit = simStartYear + y,
                      fireZones = fireZones,
                      fireRegime = fr,
@@ -206,7 +222,10 @@ foreach(i = 0:7,
         # # ##saving f for testing purposes
         # save(f, file = paste0(outputDir, "fire_", y, ".RData"))
         
+        
+        
         ####################### computing pre-fire stand attributes 
+        print("computing pre-fire stand attributes")
         ### focussing on burned cells 
         index <- which(values(f & studyArea & coverTypes %in% plan$comSppId[["SEPM"]]))
         ###
@@ -246,7 +265,7 @@ foreach(i = 0:7,
         }
         
         ####################### Salvage logging
-        
+        print("Salvage logging")
         salvageIndex <- index[which(v > plan$salvageEligibility$`SEPM`)]
         ## indentifying those eligible to harvest
         eligibleToSalvage <- which(values(sum(spEligible, na.rm = T)) >= 1)
@@ -269,7 +288,7 @@ foreach(i = 0:7,
         salv[[y]] <- s
         
         ####################### simulating regeneration density
-        
+        print("simulating regeneration density")
         ## applying minimum basal area based on what has been set aside in previous harvesting
         retentionIndex <- which(stSetAside[index] > 0)
         g <- apply(data.frame(g, stSetAside[index]), 1, function(x) max(x, na.rm = T))
@@ -305,6 +324,8 @@ foreach(i = 0:7,
         p[index[indexSalvPlant]] <- 1
         
         plant[[y]] <- p
+        
+        print("Updating stand attribute in burned cells")
         
         ## updating rho100 and volAt120 in each burned cell
         IDR100[index] <- x
@@ -349,13 +370,13 @@ foreach(i = 0:7,
         rm(f)
         h[] <- NA
         ## 
-                ##### eligible to harvest at a given timestep
+        ##### eligible to harvest at a given timestep
         eligible <- tsd > matThresh &
             volAt120[[y]] >= volMinAt120
             ##dens %in% dens_RAT[which(dens_RAT$value %in% densProd), "ID"]  ## 
         
         x <- numeric() ## vector of cells to be harvested
-
+        
         for (u in plan$uaf) {
             ## checking for age structure conditions within uaf
             old <- tsd>=plan$oldMinAge & !is.na(coverTypes) & spEligible[[u]]
@@ -383,7 +404,14 @@ foreach(i = 0:7,
                 ## eligible cells
                 index <- which(values(eligible[[u]]))
                 ## sampling cells
-                x <- append(x, sample(index, size = min(length(index), nCell)))
+                if (length(index) == 1 &
+                    nCell >=1) {
+                  x <- append(x, index)
+                } else {
+                  x <- append(x, sample(index,
+                                        size = min(length(index), nCell)))
+                }
+                
                 
             }
         }
@@ -392,7 +420,7 @@ foreach(i = 0:7,
         
         
         ################ stand attributes focussing on harvested stands
-        ### 
+        print("Computing stand attribute in harvested cells")
         iqs <- iqs_extract(stands = x)
         a <- age_extract(stands = x)
         sp <- sp_extract(stands = x)
@@ -430,38 +458,43 @@ foreach(i = 0:7,
             
             
             if(plan$retentionCut) {
-                ### what would be the basal area needed to regenerate at retentionCutTarget if 
+              print("simulating retention cut")  
+              ### what would be the basal area needed to regenerate at retentionCutTarget if 
                     #  that stands burned 
                 
                 ### scan levels of retention to assure 50 cubic-m at 120 yrs old in case of fire (brute force)
                 propRetenVals <- seq(.05, 1, 0.05)
-                seedlingDensAt120 <- matrix(NA,
+                seedlingDens <- matrix(NA,
                                        nrow = length(g),
                                        ncol = length(propRetenVals))
-                
                 
                 ######################################################################################################
                 ### predicting seedling density in case of fire
                 for (j in seq_along(propRetenVals)) {
-                  seedlingDensAt120[, j] <- seedlingFnc(sp = sp, Ac = Ac,
+                  seedlingDens[, j] <- seedlingFnc(sp = sp, Ac = Ac,
                                                         G = g * propRetenVals[j],
                                                         iqs = iqs,
                                                         seedCoef = seedCoef, tCoef = tCoef)
                 }
                 
                
-                rho100At120 <- apply(seedlingDensAt120, 2, function(x) doQmapQUANT(x = x,
-                                                                                   fobj = seedlingQMapFit,
-                                                                                   type = "linear"))
+                rho100At120 <- matrix(apply(seedlingDens, 2, function(x) doQmapQUANT(x = x,
+                                                                                     fobj = seedlingQMapFit,
+                                                                                     type = "linear")),
+                                      nrow = length(g))
                 
                 ### vol at 120 if retention portion burned the same year
-                v120 <- apply(rho100At120, 2, function(x) VFnc(sp = sp, Ac = Ac,
-                                                               iqs = iqs, rho100 = x,
-                                                               rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef,
-                                                               DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
-                                                               scenesCoef = NULL, withSenescence = F))
+                v120 <- matrix(apply(rho100At120, 2, function(x) VFnc(sp = sp, Ac = Ac,
+                                                                      iqs = iqs, rho100 = x,
+                                                                      rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef,
+                                                                      DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
+                                                                      scenesCoef = NULL, withSenescence = F)),
+                               nrow = length(g))
                 
-                propRetention <- propRetenVals[apply(v120, 1, function(x) min(which(x >= plan$retentionCutTarget)))]
+                
+                propRetention <- suppressWarnings(
+                  propRetenVals[apply(v120, 1, function(x) min(which(x >= plan$retentionCutTarget)))]
+                )
                 propRetention[is.na(propRetention)] <- 1
                 
                 ### storing values (to be written out)
@@ -477,25 +510,22 @@ foreach(i = 0:7,
               vHarv[[y]][x] <-  v
             }
             
+            ## storing harvested stands
+            harv[[y]] <- h
+            ####################### updating tsd
+            tsd[h] <- 0
+            age[[y]] <- tsd
           
-          
-          
-          
-          v[g == 0] <- 0
+            v[g == 0] <- 0
         } else {
-          g <- v <- Ac
+            g <- v <- Ac
         }
         
         # ### saving yearly timesteps for testing purposes
         # save(h, file = paste0(outputDir, "h_", y, ".RData"))
-        ## storing harvested stands
-        harv[[y]] <- h
-        ####################### updating tsd
-        tsd[h] <- 0
+      
         
-        age[[y]] <- tsd
         
-       
         # ### saving yearly timesteps for testing purposes
         # save(tsd, file = paste0(outputDir, "tsd_", y, ".RData"))
         ###
@@ -508,6 +538,14 @@ foreach(i = 0:7,
        
         
     }
+    ###########################
+    ###########################
+    print(paste("Annual processes ended"))
+    ###########################
+    ###########################
+    
+    
+    
     
     fire <- stack(fire)
     harv <- stack(harv)
@@ -516,8 +554,13 @@ foreach(i = 0:7,
     salv <- stack(salv)
     plant <- stack(plant)
     volAt120 <- stack(volAt120)
-    vHarv <- stack(vHarv)
-    vReten <- stack(vReten)
+    index <- which(as.logical(lapply(vHarv, function(x) !is.null(x))))
+    vHarv <- stack(vHarv[index])
+    names(vHarv) <- paste0("vHarv_", index)
+    index <- which(as.logical(lapply(vReten, function(x) !is.null(x))))
+    vReten <- stack(vReten[index])
+    names(vReten) <- paste0("vReten_", index)
+
 
     save(fire, file = paste0(outputDir, "outputFire_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
     save(harv, file = paste0(outputDir, "outputHarvest_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
