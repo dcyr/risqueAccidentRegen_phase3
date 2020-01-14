@@ -330,17 +330,18 @@ colnames(freqTable) <- as.character(dens_RAT[match(colnames(freqTable), as.chara
 #freqTable <- data.frame(freqTable, x <- c(as.character(dens_RAT[order(dens_RAT$ID),"value"]), "NA")
 #x <- x[!grepl("E", x)]
 
-freqTable <- as.data.frame(freqTable) %>%
-    group_by(Var1, Var2) %>%
-    summarize(Freq = sum(Freq)) %>%
-    filter(Var1 %in% as.character(coverTypes_RAT$value))
+require(forcats)
+freqTable <- suppressWarnings(as.data.frame(freqTable) %>% ## just to remove a subsequent warning about implicit NA
+                                group_by(Var1, Var2) %>%
+                                summarize(Freq = sum(Freq)) %>%
+                                filter(Var1 %in% as.character(coverTypes_RAT$value)))
 
 set.seed(12345)
 for (i in as.character(coverTypes_RAT$value)) {
     d <- coverTypes_RAT[coverTypes_RAT$value == i, "ID"]
     prob <- freqTable %>%
         filter(Var1 == i &
-                   Var2 != "NA")
+                   !is.na(Var2))
     prob <- as.data.frame(prob)
     index <- which(values(coverTypes) == d &
                        is.na(values(dens)))
