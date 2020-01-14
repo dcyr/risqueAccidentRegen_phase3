@@ -3,18 +3,19 @@
 ##### Main script driving the simulation
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
 ### setwd("C:/Users/dcyr-z840/Sync/Travail/ECCC/regenFailureRiskAssessment_phase3")
-rm(list = ls())
-################################################################################
-home <- path.expand("~")
-home <- gsub("\\\\", "/", home) # necessary on some Windows machine
-home <- gsub("/Documents", "", home) # necessary on my Windows machine
-setwd(paste(home, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3/", sep ="/"))
-################################################################################
+# rm(list = ls())
+# ################################################################################
+# home <- path.expand("~")
+# home <- gsub("\\\\", "/", home) # necessary on some Windows machine
+# home <- gsub("/Documents", "", home) # necessary on my Windows machine
+# setwd(paste(home, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3/", sep ="/"))
+setwd("D:/test/risqueAccidentRegen_phase3/")
+# ################################################################################
 ################################################################################
 wwd <- paste(getwd(), Sys.Date(), sep = "/")
 dir.create(wwd)
 setwd(wwd)
-
+print(wwd)
 ################################################################################
 ################################################################################
 require(raster)
@@ -40,7 +41,7 @@ source("../scripts/standAttribExtract.R")
 ################################################################################
 ################################################################################
 nRep <- 100
-simDuration <- 150
+simDuration <- 5
 simStartYear <- 2015
 scen <- "RCP85"
 ################################################################################
@@ -156,7 +157,7 @@ foreach(i = 0:(nRep-1),
   stSetAside <- volSetAside <- coverTypes  
   stSetAside[!is.na(stSetAside)] <- volSetAside[!is.na(volSetAside)] <- 0
   
-  writeRaster(volAt120, file = "volAt120.tif", overwrite = T)
+  writeRaster(volAt120, file = "volAt120Init.tif", overwrite = T)
   writeRaster(volInit, file = "volInit.tif", overwrite = T)
   
   rm(iqs, sp, a, Ac, r100, volInit)
@@ -204,7 +205,10 @@ foreach(i = 0:(nRep-1),
     
     
     ####################### simulating fire
-    # print("simulating fire")
+    if(verbose) {
+      print(paste("Simulating fire"))  
+    }
+    
     
     f <- simFire(tsfInit = tsd, simDur = 1, yearInit = simStartYear + y,
                  fireZones = fireZones,
@@ -223,6 +227,9 @@ foreach(i = 0:(nRep-1),
     # save(f, file = paste0(outputDir, "fire_", y, ".RData"))
     
     ####################### computing pre-fire stand attributes 
+    if(verbose) {
+      print(paste("computing pre-fire stand attributes"))  
+    }
     # print("computing pre-fire stand attributes")
     ### focussing on burned cells 
     index <- which(values(f & studyArea & coverTypes %in% plan$comSppId[["SEPM"]]))
@@ -263,7 +270,9 @@ foreach(i = 0:(nRep-1),
     }
     
     ####################### Salvage logging
-    # print("Salvage logging")
+    if(verbose) {
+      print(paste("Salvage logging"))  
+    }
     vIndex <- which(v > plan$salvageEligibility$`SEPM`)
     
     salvageIndex <- data.frame(index = index[vIndex], vSalv = v[vIndex])
@@ -289,7 +298,9 @@ foreach(i = 0:(nRep-1),
     salv[[y]] <- s
     
     ####################### simulating regeneration density
-    # print("simulating regeneration density")
+    if(verbose) {
+      print(paste("simulating regeneration density"))  
+    }
     ## applying minimum basal area based on what has been set aside in previous harvesting
     retentionIndex <- which(stSetAside[index] > 0)
     g <- apply(data.frame(g, stSetAside[index]), 1, function(x) max(x, na.rm = T))
@@ -302,7 +313,11 @@ foreach(i = 0:(nRep-1),
     seedlingDens <- seedlingFnc(sp = sp, Ac = AcEffective, G = g, iqs = iqs,
                                 seedCoef = seedCoef, tCoef = tCoef)
     
+    
     ## post-salvage plantation (if applicable)
+    if(verbose) {
+      print(paste("simulating post-salvage plantation"))  
+    }
     if(plan$salvagePlantation) {
       indexSalvPlant <- which(index %in% salvageIndex$index &
                                 seedlingDens < plan$plantationThreshold)
@@ -326,8 +341,10 @@ foreach(i = 0:(nRep-1),
     
     plant[[y]] <- p
     
-    # print("Updating stand attribute in burned cells")
-    
+
+    if(verbose) {
+      print(paste("Updating stand attribute in burned cells"))  
+    }
     ## updating rho100 and volAt120 in each burned cell
     IDR100[index] <- x
     ## storing updated relative density
@@ -528,8 +545,7 @@ foreach(i = 0:(nRep-1),
     
     if(verbose) {
       print("##############################################################")
-      print("########## sim", i, "of", nRep, "- year", y,
-                  "of", simDuration, "- completed #########")
+      print(paste("########## sim", i, "of", nRep, "- year", y,"of", simDuration, "- completed #########"))
       print("##############################################################")
     }
     
@@ -553,36 +569,62 @@ foreach(i = 0:(nRep-1),
   
   
   ### stack consider possible missing layers
-  ### mind disabled outputs
   
+
+  
+  ###########################  
+  ### mandatory stacks... should be one layer every year
   fire <- stack(fire)
   names(fire) <- paste0("fire_", 1:nlayers(fire))
   age <- stack(age)
   names(age) <- paste0("age_", 1:nlayers(age))
   rho100 <- stack(rho100)
   names(rho100) <- paste0("rho100_", 1:nlayers(rho100))
-  salv <- stack(salv)
-  names(salv) <- paste0("salv_", 1:nlayers(salv))
-  plant <- stack(plant)
-  names(plant) <- paste0("plant_", 1:nlayers(plant))
   volAt120 <- stack(volAt120)
   names(volAt120) <- paste0("volAt120_", 1:nlayers(volAt120))
-  harv <- stack(harv)
-  names(harv) <- paste0("harv_", 1:nlayers(harv))
-  reten <- stack(reten)
-  names(reten) <- paste0("reten_", 1:nlayers(reten))
   
+  
+  ### optional stacks, can be missing layers
+  stackFnc <- function(n) { ## where n is a string; the name of the list to stack
+    x <- get(n)
+    
+    index <- which(!as.logical(lapply(x, is.null))) ## identify non-null layers
+    assign("x", stack(x[index]))
+    
+    names(x) <- paste(n, index, sep = "_")
+    assign("n", x)
+  }
+ 
+  
+  for (n in c("harv", "salv", "plant", "reten", )) {
+    if(exists(n)) {x
+      stackFnc(n)
+    }
+  }
+    
   if(verbose) {
     print("writing to files")
   }
+  
   save(fire, file = paste0(outputDir, "outputFire_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
-  save(harv, file = paste0(outputDir, "outputHarvest_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
   save(age, file = paste0(outputDir, "outputTSD_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
   save(rho100, file = paste0(outputDir, "outputRho100_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
-  save(salv, file = paste0(outputDir, "outputSalvage_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
-  save(plant, file = paste0(outputDir, "outputPlantation_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
   save(volAt120, file = paste0(outputDir, "outputVolAt120_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
-  save(reten, file = paste0(outputDir, "outputVolReten_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
+ 
+  if(exists("harv")) {
+    save(harv, file = paste0(outputDir, "outputHarvest_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
+  }
+  if(exists("salv")) {
+    save(salv, file = paste0(outputDir, "outputSalvage_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
+  }
+  if(exists("plant")) {
+    save(plant, file = paste0(outputDir, "outputPlantation_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
+  }
+  if(exists("reten")) {
+    save(reten, file = paste0(outputDir, "outputVolReten_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
+  }
+ 
+  
   print("##############################################################")
   print("##############################################################")
   print(paste0("Simulation #", i, " completed ", Sys.time()-tStart))

@@ -65,8 +65,8 @@ DEP_SUR_RAT <- read.csv("../data/Inv/DEP_SUR_RAT.csv")
 TYPE_ECO <- raster("../data/Inv/TYPE_ECO.tif")
 TYPE_ECO_RAT <- read.csv("../data/Inv/TYPE_ECO_RAT.csv")
 # general geography
-lat <-  raster("../data/Geo/lat.tif")
-long <-  raster("../data/Geo/long.tif")
+lat <-  raster("../data/lat.tif")
+long <-  raster("../data/long.tif")
 # CO_TER <- raster("../data/Inv/CO_TER.tif")
 # CO_TER_RAT <- read.csv("../data/Inv/CO_TER_RAT.csv")
 
@@ -91,7 +91,7 @@ AI_deMartonne <- raster("../data/AI_deMartonne.tif")
 growSeas_days <- raster("../data/growSeas_days.tif")
 gddOver5 <- raster("../data/gddOver5.tif")
 ericaceous <- raster("../data/ericaceous.tif")
-demFullRes <- raster("../data/Geo/dem_originalRes.tif")
+#demFullRes <- raster("../data/dem_originalRes.tif")
 
 ###############################################################################################
 ###############################################################################################
@@ -420,3 +420,4 @@ stored <- append(stored, "IQS_POT")
 
 ## clearing everything from memory except these initial conditions 
 rm(list = ls()[!ls() %in% stored])
+
