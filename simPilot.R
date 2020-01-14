@@ -3,7 +3,7 @@
 ##### Main script driving the simulation
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
 ### setwd("C:/Users/dcyr-z840/Sync/Travail/ECCC/regenFailureRiskAssessment_phase3")
-# rm(list = ls())
+rm(list = ls())
 # ################################################################################
 # home <- path.expand("~")
 # home <- gsub("\\\\", "/", home) # necessary on some Windows machine
@@ -41,7 +41,7 @@ source("../scripts/standAttribExtract.R")
 ################################################################################
 ################################################################################
 nRep <- 100
-simDuration <- 5
+simDuration <- 2
 simStartYear <- 2015
 scen <- "RCP85"
 ################################################################################
@@ -53,6 +53,8 @@ IDR100Init <- IDR100
 require(doSNOW)
 require(parallel)
 clusterN <- max(1, floor(0.9*detectCores())) ### choose number of nodes to add to cluster.
+clusterN <- min(nRep, clusterN)
+
 #######
 verbose <- T
 outputDir <-  paste(getwd(), "output/", sep = "/")
@@ -64,11 +66,11 @@ registerDoSNOW(cl)
 
 #for (i in 0:(nRep-1)) {
 foreach(i = 0:(nRep-1),
-       .packages= names(sessionInfo()$otherPkgs),
-       .verbose = T) %dopar%  {
-  
-  ### workaround on Windows system to avoid multiple instances trying to access
-  ### the same files at the same time
+  .packages= names(sessionInfo()$otherPkgs),
+  .verbose = T) %dopar%  {
+          
+          ### workaround on Windows system to avoid multiple instances trying to access
+          ### the same files at the same time
   if(i < clusterN) {
     Sys.sleep(2*(i %% clusterN))
   }
@@ -157,8 +159,8 @@ foreach(i = 0:(nRep-1),
   stSetAside <- volSetAside <- coverTypes  
   stSetAside[!is.na(stSetAside)] <- volSetAside[!is.na(volSetAside)] <- 0
   
-  writeRaster(volAt120, file = "volAt120Init.tif", overwrite = T)
-  writeRaster(volInit, file = "volInit.tif", overwrite = T)
+  writeRaster(volAt120, file = paste0(outputDir, "volAt120Init_",simID, ".tif"), overwrite = T)
+  writeRaster(volInit, file = paste0(outputDir, "volInit_",simID, ".tif"), overwrite = T)
   
   rm(iqs, sp, a, Ac, r100, volInit)
   
@@ -341,7 +343,7 @@ foreach(i = 0:(nRep-1),
     
     plant[[y]] <- p
     
-
+    
     if(verbose) {
       print(paste("Updating stand attribute in burned cells"))  
     }
@@ -482,7 +484,7 @@ foreach(i = 0:(nRep-1),
         if(verbose) {
           print("simulating retention cut")
         }
-          
+        
         ### what would be the basal area needed to regenerate at retentionCutTarget if 
         #  that stands burned 
         
@@ -549,9 +551,6 @@ foreach(i = 0:(nRep-1),
       print("##############################################################")
     }
     
-    nRep <- 100
-    simDuration <- 150
-    
     ########################################################################
     ### aging landscape for next year
     age[[y]] <- tsd
@@ -559,7 +558,7 @@ foreach(i = 0:(nRep-1),
     
     
   }
-
+  
   ############################################################################
   ############################################################################
   #### stacking rasters and writing to files
@@ -570,7 +569,7 @@ foreach(i = 0:(nRep-1),
   
   ### stack consider possible missing layers
   
-
+  
   
   ###########################  
   ### mandatory stacks... should be one layer every year
@@ -594,14 +593,14 @@ foreach(i = 0:(nRep-1),
     names(x) <- paste(n, index, sep = "_")
     assign("n", x)
   }
- 
   
-  for (n in c("harv", "salv", "plant", "reten", )) {
+  
+  for (n in c("harv", "salv", "plant", "reten")) {
     if(exists(n)) {x
       stackFnc(n)
     }
   }
-    
+  
   if(verbose) {
     print("writing to files")
   }
@@ -610,7 +609,7 @@ foreach(i = 0:(nRep-1),
   save(age, file = paste0(outputDir, "outputTSD_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
   save(rho100, file = paste0(outputDir, "outputRho100_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
   save(volAt120, file = paste0(outputDir, "outputVolAt120_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
- 
+  
   if(exists("harv")) {
     save(harv, file = paste0(outputDir, "outputHarvest_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
   }
@@ -623,7 +622,7 @@ foreach(i = 0:(nRep-1),
   if(exists("reten")) {
     save(reten, file = paste0(outputDir, "outputVolReten_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
   }
- 
+  
   
   print("##############################################################")
   print("##############################################################")
