@@ -9,7 +9,7 @@
 # home <- gsub("\\\\", "/", home) # necessary on some Windows machine
 # home <- gsub("/Documents", "", home) # necessary on my Windows machine
 # setwd(paste(home, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3/", sep ="/"))
-# setwd("D:/test/risqueAccidentRegen_phase3/")
+# setwd("~/Data/risqueAccidentRegen_phase3/")
 # ################################################################################
 ################################################################################
 wwd <- paste(getwd(), Sys.Date(), sep = "/")
@@ -40,8 +40,8 @@ source(paste(psDir, "Pothier-Savard.R", sep = "/"))
 source("../scripts/standAttribExtract.R")
 ################################################################################
 ################################################################################
-nRep <- 100
-simDuration <- 2
+nRep <- 8
+simDuration <-75
 simStartYear <- 2015
 scen <- "RCP85"
 ################################################################################
@@ -56,7 +56,7 @@ clusterN <- max(1, floor(0.9*detectCores())) ### choose number of nodes to add t
 clusterN <- min(nRep, clusterN)
 
 #######
-verbose <- T
+verbose <- F
 outputDir <-  paste(getwd(), "output/", sep = "/")
 dir.create(outputDir)
 
@@ -591,13 +591,13 @@ foreach(i = 0:(nRep-1),
     assign("x", stack(x[index]))
     
     names(x) <- paste(n, index, sep = "_")
-    assign("n", x)
+    return(x)
   }
   
   
   for (n in c("harv", "salv", "plant", "reten")) {
     if(exists(n)) {x
-      stackFnc(n)
+      assign(n, stackFnc(n))
     }
   }
   
