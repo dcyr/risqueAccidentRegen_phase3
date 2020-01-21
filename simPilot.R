@@ -2,20 +2,19 @@
 ################################################################################
 ##### Main script driving the simulation
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-### setwd("C:/Users/dcyr-z840/Sync/Travail/ECCC/regenFailureRiskAssessment_phase3")
+# ## setwd("C:/Users/dcyr-z840/Sync/Travail/ECCC/regenFailureRiskAssessment_phase3")
 # rm(list = ls())
 # ################################################################################
 # home <- path.expand("~")
 # home <- gsub("\\\\", "/", home) # necessary on some Windows machine
 # home <- gsub("/Documents", "", home) # necessary on my Windows machine
 # setwd(paste(home, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3/", sep ="/"))
-# setwd("~/Data/risqueAccidentRegen_phase3/")
-# ################################################################################
+# setwd("D:/test/risqueAccidentRegen_phase3/")
+################################################################################
 ################################################################################
 wwd <- paste(getwd(), Sys.Date(), sep = "/")
 dir.create(wwd)
 setwd(wwd)
-print(wwd)
 ################################################################################
 ################################################################################
 require(raster)
@@ -43,7 +42,7 @@ source("../scripts/standAttribExtract.R")
 nRep <- 100
 simDuration <- 150
 simStartYear <- 2015
-scen <- "RCP85"
+scen <- "baseline" #c("baseline", "RCP85")
 ################################################################################
 tsdInit <- tsd
 IDR100Init <- IDR100
@@ -52,11 +51,12 @@ IDR100Init <- IDR100
 ### actual simulation
 require(doSNOW)
 require(parallel)
-clusterN <- max(1, floor(0.9*detectCores())) ### choose number of nodes to add to cluster.
+clusterN <- max(1, floor(0.85*detectCores())) ### choose number of nodes to add to cluster.
+
 clusterN <- min(nRep, clusterN)
 
 #######
-verbose <- F
+verbose <- T
 outputDir <-  paste(getwd(), "output/", sep = "/")
 dir.create(outputDir)
 
@@ -65,20 +65,25 @@ cl = makeCluster(clusterN,
 registerDoSNOW(cl)
 
 #for (i in 0:(nRep-1)) {
-foreach(i = 0:(nRep-1),
+foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   .packages= names(sessionInfo()$otherPkgs),
   .verbose = T) %dopar%  {
-          
-          ### workaround on Windows system to avoid multiple instances trying to access
-          ### the same files at the same time
+  
+  require(stringr) 
+  ### workaround on Windows system to avoid multiple instances trying to access
+  ### the same files at the same time
   if(i < clusterN) {
     Sys.sleep(2*(i %% clusterN))
   }
   
-  
-  tStart <- Sys.time()
-  require(stringr)
   simID <- str_pad(i, nchar(nRep-1), pad = "0")
+  
+  con <- file(paste0(outputDir, "sim_", simID, ".log"))
+  sink(con)
+  sink(con, type = "message")
+  tStart <- Sys.time()
+
+  
   print("##############################################################")
   print("##############################################################")
   print(paste("simulating replicate", i))
@@ -547,7 +552,7 @@ foreach(i = 0:(nRep-1),
     
     if(verbose) {
       print("##############################################################")
-      print(paste("########## sim", i, "of", nRep, "- year", y,"of", simDuration, "- completed #########"))
+      print(paste("########## sim", i, "of", nRep, "- year", y,"of", simDuration, "- completed ############"))
       print("##############################################################")
     }
     
@@ -603,24 +608,34 @@ foreach(i = 0:(nRep-1),
   
   if(verbose) {
     print("writing to files")
-  }
+  } 
+  print("saving outputFire_*.RData")
+  save(fire, file = paste0(outputDir, "outputFire_", simID, ".RData"))
   
-  save(fire, file = paste0(outputDir, "outputFire_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
-  save(age, file = paste0(outputDir, "outputTSD_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
-  save(rho100, file = paste0(outputDir, "outputRho100_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
-  save(volAt120, file = paste0(outputDir, "outputVolAt120_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
+  print("saving outputTSD_*.RData")
+  save(age, file = paste0(outputDir, "outputTSD_", simID, ".RData"))
+  
+  print("saving outputRho100_*.RData")
+  save(rho100, file = paste0(outputDir, "outputRho100_", simID, ".RData"))
+  
+  print("saving outputVolAt120_*.RData")
+  save(volAt120, file = paste0(outputDir, "outputVolAt120_", simID, ".RData"))
   
   if(exists("harv")) {
-    save(harv, file = paste0(outputDir, "outputHarvest_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
+    print("saving outputHarvest_*.RData")
+    save(harv, file = paste0(outputDir, "outputHarvest_", simID, ".RData"))
   }
   if(exists("salv")) {
-    save(salv, file = paste0(outputDir, "outputSalvage_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
+    print("saving outputSalvage_*.RData")
+    save(salv, file = paste0(outputDir, "outputSalvage_", simID, ".RData"))
   }
   if(exists("plant")) {
-    save(plant, file = paste0(outputDir, "outputPlantation_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
+    print("saving outputPlantation_*.RData")
+    save(plant, file = paste0(outputDir, "outputPlantation_", simID, ".RData"))
   }
   if(exists("reten")) {
-    save(reten, file = paste0(outputDir, "outputVolReten_", str_pad(i, nchar(nRep-1), pad = "0"), ".RData"))
+    print("saving outputVolReten_*.RData")
+    save(reten, file = paste0(outputDir, "outputVolReten_", simID, ".RData"))
   }
   
   
@@ -628,7 +643,8 @@ foreach(i = 0:(nRep-1),
   print("##############################################################")
   print(paste0("Simulation #", i, " completed ", Sys.time()-tStart))
   print("##############################################################")
-  
+  sink()
+  sink(type = "message")
 }
 
 stopCluster(cl)

@@ -3,15 +3,18 @@
 ##### Compiling raw harvest outputs to a tidy data frame
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
 rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario"))])
+##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
+rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario"))])
 #######
-# rm(list = ls())
-# setwd("D:/regenFailureRiskAssessmentData_phase2/2018-10-29_coupe0.62_recup70")
-# ####################################################################################################
-# scenario <- "coupe0.62_recup70"
-# ####################################################################################################
-# wwd <- paste(getwd(), Sys.Date(), sep = "/")
-# dir.create(wwd)
-# setwd(wwd)
+rm(list = ls())
+setwd("D:/test/risqueAccidentRegen_phase3/100rep_baseline/")
+####################################################################################################
+scenario <- "baseline"
+####################################################################################################
+wwd <- paste(getwd(), Sys.Date(), sep = "/")
+dir.create(wwd)
+setwd(wwd)
+
 
 
 #################
@@ -49,7 +52,7 @@ require(doSNOW)
 require(parallel)
 require(foreach)
 # clusterN <- 2
-clusterN <-  8#max(1, floor(0.9*detectCores()))  ### choose number of nodes to add to cluster.
+clusterN <-  12#max(1, floor(0.9*detectCores()))  ### choose number of nodes to add to cluster.
 #######
 cl = makeCluster(clusterN, outfile = "") ##
 registerDoSNOW(cl)
