@@ -100,7 +100,7 @@ df <- merge(df, dfSummary)
 
 
 
-p <- c(p.050 = "5%", p.250 = "25%", p.500 = "mÃ©diane", p.750 = "75%", p.950 = "95%")
+p <- c(p.050 = "5%", p.250 = "25%", p.500 = "médiane", p.750 = "75%", p.950 = "95%")
 
 m <- ggplot(df, aes(x = year + 2015, y = 100*prop,
                     group = ID)) +
@@ -142,24 +142,24 @@ print(m + theme_dark() +
                 #plot.subtitle = element_text(size = rel(1)),
                 plot.caption = element_text(size = rel(0.65))) +
           
-          labs(title = "Structure d'Ã¢ge",
+          labs(title = "Structure d'Âge",
                #subtitle = paste0(percentile, "e percentile"),
-               subtitle = #paste0("En bleu sont illustrÃ©es les mÃ©dianes et en jaune les percentiles ",
-                   paste0("La mÃ©diane est illustrÃ©e en bleu tandis que les percentiles ",
+               subtitle = #paste0("En bleu sont illustrées les médianes et en jaune les percentiles ",
+                   paste0("La médiane est illustrée en bleu tandis que les percentiles ",
                           p[1], ", ", p[2], ", ", p[4], " et ", p[5],
-                          # ",\nsur un total de ", nRep, " rÃ©alisations."),
-                          #sur un total de ", nRep, " rÃ©alisations."),
+                          # ",\nsur un total de ", nRep, " réalisations."),
+                          #sur un total de ", nRep, " réalisations."),
                           "",
-                          " sont illustrÃ©s en jaune.\n",
-                          "Les seuils d'altÃ©ration acceptable pouvant contraindre les rÃ©coltes sont quant Ã  eux indiquÃ©s en rouge.\n",
+                          " sont illustrés en jaune.\n",
+                          "Les seuils d'altération acceptable pouvant contraindre les récoltes sont quant à eux indiqués en rouge.\n",
                           "(Total de ", nSims, " simulations)"),
-               caption = paste0("Ã‚ge de rÃ©colte - Ã‰pinette noire: 90 ans\n",
+               caption = paste0("Âge de récolte - Épinette noire: 90 ans\n",
                                 "Pin gris: 76 ans\n",
                                 "Cycle des feux - baseline: 104 ans\n",
-                                "Min vieilles forÃªts (>=100 ans): ", targets[2,1]*100, "%\n",
-                                "Max rÃ©gÃ©n. (< 20 ans): ",targets[1,1]*100, "%"),
+                                "Min vieilles forêts (>=100 ans): ", targets[2,1]*100, "%\n",
+                                "Max régén. (< 20 ans): ",targets[1,1]*100, "%"),
                x = "",
-               y = "Proportion du territoire Ã©ligible Ã  la rÃ©colte (%)\n"))
+               y = "Proportion du territoire éligible à la récolte (%)\n"))
 
 dev.off()
 

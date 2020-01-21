@@ -63,24 +63,18 @@ outputCompiled <- get(load(paste0("outputCompiledHarvest_", scenario, ".RData"))
 nSims <- nrow(distinct(outputCompiled, scenario, replicate))
 
 ### summarizing results, percentile & such
-outputCompiled <- filter(outputCompiled, uaf == "026-61")
+outputCompiled <- filter(outputCompiled, uaf == "total")
 outputCompiled <- merge(outputCompiled, target)
-targetTotal <- target[target$uaf == "026-61", "harvTargetArea_ha"]
+targetTotal <- target[target$uaf == "total", "harvTargetArea_ha"]
 ###
 
 
 summaryHarvest <- outputCompiled %>%
     mutate(scenario = scenario,
-           propTotal = areaHarvestedTotal_ha / harvTargetArea_ha) %>%
-    group_by(scenario, year, uaf, replicate, harvestType) %>%
-    summarise(areaHarvestedTotal_ha = sum(areaHarvestedTotal_ha),
-              harvTargetArea_ha = sum(harvTargetArea_ha)) %>%
-    group_by(scenario, uaf, replicate, year, harvTargetArea_ha) %>%
-    summarize(salvProp = areaHarvestedTotal_ha[harvestType == "salvage"] / sum(areaHarvestedTotal_ha),
-              areaHarvestedTotal_ha = sum(areaHarvestedTotal_ha)) %>%
-    mutate(areaHarvestedTotal_ha = ifelse(areaHarvestedTotal_ha>harvTargetArea_ha,
-                                          harvTargetArea_ha, areaHarvestedTotal_ha))
-
+           harvAreaTotal = areaHarvestedTotal_ha + areaSalvagedTotal_ha,
+           propTarget = harvAreaTotal / targetTotal,
+           salvProp = areaSalvagedTotal_ha / harvAreaTotal) 
+    
 write.csv(summaryHarvest, paste0("harvestSummary_", scenario, ".csv"), row.names = F)
 
 
@@ -99,7 +93,21 @@ summaryHarvest <- summaryHarvest %>%
               p50SalvProp = quantile(salvProp, .5, na.rm = T),
               p75SalvProp = quantile(salvProp, .75, na.rm = T),
               p95SalvProp = quantile(salvProp, .95, na.rm = T),
-              p99SalvProp = quantile(salvProp, .99, na.rm = T))
+              p99SalvProp = quantile(salvProp, .99, na.rm = T),
+              p01HarvestVol = quantile(volHarvestedTotal_cubMeter, .01),
+              p05HarvestVol = quantile(volHarvestedTotal_cubMeter, .05),
+              p25HarvestVol = quantile(volHarvestedTotal_cubMeter, .25),
+              p50HarvestVol = quantile(volHarvestedTotal_cubMeter, .5),
+              p75HarvestVol = quantile(volHarvestedTotal_cubMeter, .75),
+              p95HarvestVol = quantile(volHarvestedTotal_cubMeter, .95),
+              p99HarvestVol = quantile(volHarvestedTotal_cubMeter, .99),
+              p01SalvVol = quantile(volSalvagedTotal_cubMeter, .01),
+              p05SalvVol = quantile(volSalvagedTotal_cubMeter, .05),
+              p25SalvVol = quantile(volSalvagedTotal_cubMeter, .25),
+              p50SalvVol = quantile(volSalvagedTotal_cubMeter, .5),
+              p75SalvVol = quantile(volSalvagedTotal_cubMeter, .75),
+              p95SalvVol = quantile(volSalvagedTotal_cubMeter, .95),
+              p99SalvVol = quantile(volSalvagedTotal_cubMeter, .99))
 
 write.csv(summaryHarvest, paste0("harvestSummaryPercentiles_", scenario, ".csv"), row.names = F)
 
@@ -131,7 +139,7 @@ m <- ggplot(df, aes(x = year + 2015, y = (value/targ)*100,
     guides(linetype = guide_legend(reverse=T))
 
 
-png(filename= paste0("harvestRealized.png"),
+png(filename= paste0("harvestRealized_", scenario, ".png"),
     width = 8, height = 6, units = "in", res = 600, pointsize=10)
 
 options(scipen=999)
@@ -144,18 +152,18 @@ print(m + theme_dark() +
                 #plot.subtitle = element_text(size = rel(1)),
                 plot.caption = element_text(size = rel(0.65))) +
           
-          labs(title = "Analyse des r√©coltes r√©alis√©es",
+          labs(title = paste0("Analyse des rÈcoltes rÈalisÈes - ", scenario),
                #subtitle = paste0(percentile, "e percentile"),
-               subtitle = paste0("Chaque courbe repr√©sente la fraction du taux de r√©colte cibl√© (", targetTotal, " ha/ann√©e) bel et bien r√©colt√©e\n",
-                                 "pour un percentile donn√© au sein d'un ensemble de ",nSims, " simulations."),
-               caption = paste0("√Çge min. de r√©colte (sauf r√©cup.) - √âpinette noire: 90 ans\n",
+               subtitle = paste0("Chaque courbe reprÈsente la fraction du taux de rÈcolte ciblÈ (", targetTotal, " ha/annÈe) bel et bien rÈcoltÈe\n",
+                                 "pour un percentile donnÈ au sein d'un ensemble de ",nSims, " simulations."),
+               caption = paste0("¿ge min. de rÈcolte (sauf rÈcup.) - …pinette noire: 90 ans\n",
                                 "Pin gris: 76 ans\n",
-                                "Vol. marchand min.: 50 m3/ha (R√©cup.: 70 m3/ha)\n",
+                                "Vol. marchand min.: 50 m3/ha (RÈcup.: 70 m3/ha)\n",
                                 "Cycle des feux - baseline: 104 ans\n"),
                                 #"Min vieilles for√™ts (>=100 ans): 14%\n",
-                                #"Max r√©g√©n. (< 20 ans): 35%"),
+                                #"Max rÈgÈn. (< 20 ans): 35%"),
                x = "",
-               y = "Fraction du taux de r√©colte cibl√© r√©colt√©e (%)\n"))
+               y = "Fraction du taux de rÈcolte ciblÈ rÈcoltÈe (%)\n"))
 
 dev.off()
 
@@ -205,18 +213,18 @@ print(m + theme_dark() +
               #plot.subtitle = element_text(size = rel(1)),
               plot.caption = element_text(size = rel(0.65))) +
           
-          labs(title = "Analyse de la proportion des r√©coltes effectu√©e apr√®s feu (r√©cup√©ration)",
+          labs(title = "Analyse de la proportion des rÈcoltes effectuÈe apr√®s feu (rÈcupÈration)",
                #subtitle = paste0(percentile, "e percentile"),
-               subtitle = paste0("Chaque courbe repr√©sente la fraction du total des superficies r√©colt√©es correspondant √† la coupe de r√©cup√©ration\n",
-                                 "pour un percentile donn√© au sein d'un ensemble de ",nSims, " simulations."),
-               caption = paste0("√Çge min. de r√©colte (sauf r√©cup.) - √âpinette noire: 90 ans\n",
-                                "Pin gris: 76 ans\n",
-                                "Vol. marchand min.: 50 m3/ha (R√©cup.: 70 m3/ha)\n",
-                                "Cycle des feux - baseline: 104 ans\n"),
+               subtitle = paste0("Chaque courbe reprÈsente la fraction du total des superficies rÈcoltÈes correspondant √† la coupe de rÈcupÈration\n",
+                                 "pour un percentile donnÈ au sein d'un ensemble de ",nSims, " simulations."),
+               # caption = paste0("¿ge min. de rÈcolte (sauf rÈcup.) - …pinette noire: 90 ans\n",
+               #                  "Pin gris: 76 ans\n",
+               #                  "Vol. marchand min.: 50 m3/ha (RÈcup.: 70 m3/ha)\n",
+               #                  "Cycle des feux - baseline: 104 ans\n"),
                #"Min vieilles for√™ts (>=100 ans): 14%\n",
-               #"Max r√©g√©n. (< 20 ans): 35%"),
+               #"Max rÈgÈn. (< 20 ans): 35%"),
                x = "",
-               y = "Proportion des coupes de r√©cup√©ration (%)\n"))
+               y = "Proportion des coupes de rÈcupÈration (%)\n"))
 
 dev.off()
 
@@ -271,7 +279,7 @@ df$variable <- factor(df$variable, levels = c("5%", "10%", "25%", "50%", "75%"))
 m <- ggplot(df, aes(x = year + 2015, y = value*100,
                     linetype = variable)) +
     geom_line(size = 0.5) +
-    scale_linetype_manual("√âcart tol√©r√©\n",
+    scale_linetype_manual("√âcart tolÈrÈ\n",
                     values = seq_along(levels(df$variable)))
 
 
@@ -289,17 +297,17 @@ print(m + theme_dark() +
           
           labs(title = "Analyse de risque de rupture d'approvisionnement",
                #subtitle = paste0(percentile, "e percentile"),
-               subtitle = paste0("Probabilit√© de ne pas atteindre la cible de r√©colte au moins une fois en fonction de diff√©rents niveaux de\n",
-                                 "tol√©rance par rapport √† cette cible - estim√© sur la base d'un ensemble de ", nSims, " simulations."),
-               caption = paste0("√Çge min. de r√©colte (sauf r√©cup.) - √âpinette noire: 90 ans\n",
+               subtitle = paste0("ProbabilitÈ de ne pas atteindre la cible de rÈcolte au moins une fois en fonction de diffÈrents niveaux de\n",
+                                 "tolÈrance par rapport √† cette cible - estimÈ sur la base d'un ensemble de ", nSims, " simulations."),
+               caption = paste0("¿ge min. de rÈcolte (sauf rÈcup.) - √âpinette noire: 90 ans\n",
                                 "Pin gris: 76 ans\n",
-                                "Vol. marchand min.: 50 m3/ha (R√©cup.: 70 m3/ha)\n",
+                                "Vol. marchand min.: 50 m3/ha (RÈcup.: 70 m3/ha)\n",
                                 
                                 "Cycle des feux - baseline: 104 ans\n"),
                #"Min vieilles for√™ts (>=100 ans): 14%\n",
-               #"Max r√©g√©n. (< 20 ans): 35%"),
+               #"Max rÈgÈn. (< 20 ans): 35%"),
                x = "",
-               y = "Probabilit√© de rupture\nd'approvisionnement (%)\n"))
+               y = "ProbabilitÈ de rupture\nd'approvisionnement (%)\n"))
 
 
 dev.off()
