@@ -3,8 +3,6 @@
 ##### Compiling relative density outputs to tidy data frames
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
 rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario"))])
-volAt120OutputDir <- "outputVolAt120"
-dir.create(volAt120OutputDir)
 #######
 # rm(list = ls())
 # setwd("D:/regenFailureRiskAssessmentData_phase2/2018-10-29")
@@ -20,228 +18,98 @@ dir.create(volAt120OutputDir)
 require(raster)
 #require(rgeos)
 require(dplyr)
-####################################################################
-#### Sourcing Pothier-Savard equations
-psDir <- "../data/Pothier-Savard"
-source(paste(psDir, "Pothier-Savard.R", sep = "/"))
 
-studyArea <- raster("../studyArea.tif")
-coverTypes <- raster("../coverTypes.tif")
-coverTypes_RAT <- read.csv("../coverTypes_RAT.csv")
-iqs <- raster("../iqs.tif")
-rho100Init <- raster("../IDR100.tif")
-#dens_RAT <- read.csv("../dens_RAT.csv")
-uaf <- raster("../uaf.tif")
-subZones <- raster("../subZones.tif")
-subZones_RAT <- read.csv("../subZones_RAT.csv")
-###################################################################
-## loading management plan (to fetch commercial cover types )
-managementPlan <- get(load("../managementPlan.RData"))
-plan <- managementPlan[[scenario]]
-## eligible to harvest
+for (s in scenario) {
+    ## loading management plan (to fetch commercial cover types )
+    managementPlan <- get(load(paste0("../", s,"/managementPlan.RData")))
+    plan <- managementPlan[["baseline"]] 
+    x <- list.files(paste0("../", s,"/output"))
+    index <- grep(".RData", x)
+    index <- intersect(index, grep("outputVolAt120", x))
+    x <- x[index]
+    simID <- gsub(".RData", "", x)
+    simID <- strsplit(simID, "_")
+    simID <- as.character(lapply(simID, function(x) x[[2]]))
 
-## spp eligible (commercial species)
-spEligibleVals <- which(coverTypes_RAT$value %in% c("EN", "PG"))#plan$comSppId[["SEPM"]]
-spEligible <- coverTypes %in% spEligibleVals
-spEligible[!spEligible] <- NA
-
-
-## focusing on "EN" and "PG" covertypes
-ctVal <- coverTypes
-ctVal[!(coverTypes %in% spEligibleVals)] <- NA
-ctVal <- values(ctVal)
-##
-szVal <- subZones
-szVal[szVal == subZones_RAT[which(subZones_RAT$value == "Non-forest"),"ID"]] <- NA
-szVal <- values(szVal)
-## Site index (IQS)
-iqsVal <- iqs
-iqsVal[!(coverTypes %in% spEligibleVals)] <- NA
-iqsVal <- values(iqsVal)
-## age at 1 m
-t1Val <- tFnc(sp = coverTypes_RAT[match(ctVal, coverTypes_RAT$ID), "value"],
-              iqs = iqsVal,
-              tCoef = tCoef)
-
-##
-convFactor <- prod(res(studyArea))/10000### to convert to hectares
-###################################################################
-## loading management plan (to fetch age structure targets, and productive cover types )
-
-# managementPlan <- get(load("../managementPlan.RData"))
-# plan <- managementPlan$baseline
-# ## eligible to harvest
-# harvEligible <- uaf %in% plan$uaf &
-#     subZones %in% plan$subZone
-# harvEligible[!harvEligible] <- NA
-# 
-# ## spp eligible (commercial species)
-# spEligible <- coverTypes %in% plan$comSppId[["SEPM"]] & harvEligible
-# spEligible[!spEligible] <- NA
-# 
-# ##
-# # regenMaxProp <- plan$regenMaxProp
-# regenMaxAge <- plan$regenMaxAge
-# # oldMinProp <- plan$oldMinProp
-# oldMinAge <- plan$oldMinAge
-# 
-# # ## targets
-# eligibleArea <- t(zonal(spEligible, uaf,  "sum")[,-1]) * convFactor
-# eligibleArea <- data.frame(uaf = as.character(uaf_RAT[uaf_RAT$ID, "value"]), managedAreaTotal_ha = as.numeric(eligibleArea))
-# eligibleArea <- rbind(eligibleArea,
-#                       data.frame(uaf = "total",
-#                                  managedAreaTotal_ha = sum(eligibleArea$managedAreaTotal_ha)))
-
-####################################################################
-####################################################################
-outputFolder <- "../output"
-x <- list.files(outputFolder)
-index <- grep(".RData", x)
-index <- intersect(index, grep("Rho100", x))
-x <- x[index]
-simInfo <- gsub(".RData", "", x)
-simInfo <- strsplit(simInfo, "_")
-#scenario <- as.character(lapply(simInfo, function(x) x[[2]]))
-replicates <- as.numeric(lapply(simInfo, function(x) x[2]))
-###########################################
-###########################################
-
-require(doSNOW)
-require(parallel)
-require(foreach)
-# clusterN <- 2
-clusterN <-  12#max(1, floor(0.9*detectCores()))  ### choose number of nodes to add to cluster.
-#######
-cl = makeCluster(clusterN, outfile = "") ##
-registerDoSNOW(cl)
-#######
-outputCompiled <- foreach(i = seq_along(x), .combine = "rbind") %dopar% {
-    require(raster)
-    require(reshape2)
-    require(dplyr)
-    
-    ## simInfo
-    s <- scenario
-    # s <- scenario[i]
-    r <- replicates[i]
-    
-    ## computing initial volume at 120 y. old, only once
-    if (i == 1) {
-        ## fetching outputs
-        rho100 <- raster("../IDR100.tif")
-        rho100[rho100>1] <- 1
+    ########################################################################################################
+    require(doSNOW)
+    require(parallel)
+    require(foreach)
+    # clusterN <- 2
+    clusterN <- max(1, floor(0.5*detectCores()))  ### choose number of nodes to add to cluster.
+    #######
+    cl = makeCluster(clusterN, outfile = "") ##
+    registerDoSNOW(cl)
+    #######
+    outputCompiled <- foreach(i = seq_along(x), .combine = "rbind") %dopar% {
         
-        ## focusing on commercial species
-        rho100[is.na(spEligible)] <- NA
-        index <- which(complete.cases(values(rho100)))
-        volAt120 <- rho100
-        volAt120[] <- NA
-        ## compiling relative density at 100 y-old species and subzones
-        out <- as.data.frame(values(rho100))
-        rm(rho100)
-        vals <- colnames(out)    
-        out <- cbind(ctVal, iqsVal, szVal, t1Val, out)
-        out <- melt(out, measure.vars = vals)
+        require(raster)
+        require(reshape2)
+        require(dplyr)
         
-        index <- which(complete.cases(out))
-        out <- out[index,]
-        ## compute volume at 120 y-old
-        out <- out %>%
-            mutate(volAt120 = VFnc(sp = coverTypes_RAT[match(ctVal, coverTypes_RAT$ID), "value"],
-                                   iqs = iqsVal,
-                                   Ac = 120 - t1Val,
-                                   rho100 = value,
-                                   HdCoef = HdCoef, GCoef = GCoef, DqCoef = DqCoef, VCoef = VCoef,
-                                   rho100Coef = rho100Coef, merchantable = T,
-                                   scenesCoef = NULL, withSenescence = F)) %>%
-            mutate(volAt120 = ifelse(is.na(volAt120), 0, volAt120)) %>%
-            mutate(volAt120Cls =  cut(volAt120, include.lowest = T, right = F, breaks=c(0,50, 80, 999)))
+        r <- simID[i]
         
-        volAt120[index] <- out$volAt120
-        writeRaster(volAt120, file = "volAt120_init.tif")
+        ## could be outside this loop at the moment, but will eventually be dynamics
+        ## will need to be dynamics when covertypes will be dynamics
+        coverTypes <- raster(paste0("../", s, "/coverTypes.tif"))
+        coverTypes_RAT <- read.csv(paste0("../", s, "/coverTypes_RAT.csv"))
+        ctVal <- values(coverTypes)
+        convFactor <- prod(res(coverTypes))/10000### to convert to hectares
+
+        volAt120 <- get(load(paste0("../", s, "/output/outputVolAt120_", simID[i], ".RData")))
+        ### volAt120Init
+        volAt120Init <- raster(paste0("../", s, "/output/volAt120init_", simID[i], ".tif"))
+        names(volAt120Init) <- "volAt120_0"
+        volAt120 <- stack(volAt120Init, volAt120)
         
-    
+        volAt120 <- values(volAt120)
+        volAt120Cls <- apply(volAt120, 2, function(x) cut(x, include.lowest = T, right = F, breaks=c(0, 30, 50, 80, 999)))
+       
+        out <- list()
+        for (sp in c("EN", "PG")) {
+            ctID <- coverTypes_RAT[match(sp, coverTypes_RAT$value), "ID"]
+            index <- which(ctVal == ctID)
+            
+            tmp <- volAt120Cls[index,]
+            tmp <- apply(tmp, 2, table, useNA = "always")
+            
+            ### sometimes need to be converted into a data.frame if number of element differ among years
+            if(class(tmp) == "list") {
+                cNames <- names(tmp[[1]])
+                cNames[is.na(cNames)] <- "N/A"
+                df <- data.frame(matrix(NA,
+                                        ncol = length(cNames),
+                                       nrow = length(tmp)))
+                colnames(df) <- cNames
+                for (y in 1:length(tmp)) {
+                    x <- tmp[[y]]
+                    j <- names(x)
+                    j[is.na(j)] <- "N/A"
+                    df[y, j] <- x
+                    df[is.na(df)] <- 0
+                    tmp <- t(df)
+                }
+            } else {
+                rownames(tmp)[is.na(rownames(tmp))] <- "N/A"
+            }
+            tmp <- tmp * convFactor
+            tmp <- tmp %>%
+                melt(value.name = "area_ha") %>%
+                mutate(year = as.numeric(gsub("volAt120_", "", Var2)),
+                       volAt120Cls = Var1,
+                       coverType = sp,
+                       scenario = s,
+                       simID = r) %>%
+                select(scenario, simID, coverType, year, volAt120Cls, area_ha)
+            out[[sp]] <- tmp
+        }
+        out <- do.call("rbind", out)
+        print(paste("outputVolAt120", s, r))
+            
+        return(out)
     }
     
-    
-    ## fetching outputs
-    rho100 <- get(load(paste(outputFolder, x[i], sep="/")))
-    ## focusing on commercial species
-    rho100[is.na(spEligible)] <- NA
-    index <- which(complete.cases(values(rho100)))
-    volAt120 <- rho100
-    volAt120[] <- NA
-    ## compiling relative density at 100 y-old species and subzones
-    out <- as.data.frame(values(rho100))
-    rm(rho100)
-    vals <- colnames(out)    
-    out <- cbind(ctVal, iqsVal, szVal, t1Val, out)
-    out <- melt(out, measure.vars = vals)
-    vAt120 <- out[,c("variable", "value")]
-    vAt120[,"value"] <- NA
-    index <- which(complete.cases(out))
-    out <- out[index,]
-    ## compute volume at 120 y-old
-    out <- out %>%
-        mutate(volAt120 = VFnc(sp = coverTypes_RAT[match(ctVal, coverTypes_RAT$ID), "value"],
-                               iqs = iqsVal,
-                               Ac = 120 - t1Val,
-                               rho100 = value,
-                               HdCoef = HdCoef, GCoef = GCoef, DqCoef = DqCoef, VCoef = VCoef,
-                               rho100Coef = rho100Coef, merchantable = T,
-                               scenesCoef = NULL, withSenescence = F)) %>%
-        mutate(volAt120 = ifelse(is.na(volAt120), 0, volAt120)) %>%
-        mutate(volAt120Cls =  cut(volAt120, include.lowest = T, right = F, breaks=c(0,50, 80, 999)))
-    
-    
-    #rVal <- unstack(out[,c("variable", "volAt120")], form = volAt120 ~ variable)
-    #rVal <- do.call("cbind", rVal)
-    ## storing values in raster stack
-    vAt120[index,"value"] <- out$volAt120
-    vAt120 <- unstack(vAt120[,c("variable", "value")], form = value ~ variable)
-    vAt120 <- round(as.matrix(vAt120),1)
-    values(volAt120) <- vAt120
-    # save raster 'volAt120'
-    save(volAt120, file = paste0(volAt120OutputDir, "/outputVolAt120_", simInfo[[i]][2], ".RData"))
-
-    
-    out <- out %>%
-        group_by(ctVal, szVal, variable, volAt120Cls) %>%
-        summarise(Area_ha = n()*convFactor)
-    
-    out <- data.frame(scenario = s, 
-                      replicate = r,
-                      coverTypes = coverTypes_RAT[match(out$ctVal, coverTypes_RAT$ID), "value"],
-                      subZone = subZones_RAT[match(out$szVal, subZones_RAT$ID), "value"],
-                      year = as.numeric(gsub("layer.", "", out$variable)),
-                      volAt120Cls = out$volAt120Cls,
-                      area_ha = out$Area_ha)
-    
-    print(paste(s, r))
-    return(out)
-    
+    stopCluster(cl)
+    outputCompiled <- arrange(outputCompiled, scenario, simID, year, coverType, volAt120Cls)
+    save(outputCompiled, file = paste0("outputCompiledVolAt120_", s, ".RData"))
 }
-
-stopCluster(cl)
-#outputCompiled <- arrange(outputCompiled, scenario, uaf, year, replicate)
-
-save(outputCompiled, file = paste0("outputCompiledVolAt120Cls_", scenario, ".RData"))
-
-
-# #### testing outputs
-# require(ggplot2)
-# 
-# df <- out 
-# 
-# png(filename= paste0("prodClsTest.png"),
-#     width = 8, height = 4, units = "in", res = 600, pointsize=10)
-# 
-# options(scipen=999)
-# 
-# 
-# ggplot(data = df, aes(x = 2015 + year, y = area_ha, colour = volAt120Cls)) +
-#     geom_line() +
-#     facet_grid(coverTypes ~ subZone) +
-#     labs(x = "")
-# 
-# dev.off()

@@ -167,7 +167,7 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   writeRaster(volAt120, file = paste0(outputDir, "volAt120Init_",simID, ".tif"), overwrite = T)
   writeRaster(volInit, file = paste0(outputDir, "volInit_",simID, ".tif"), overwrite = T)
   
-  rm(iqs, sp, a, Ac, r100, volInit)
+  rm(iqs, sp, a, Ac, r100, volInit, index)
   
   ## creating raster stacks by UAFs
   uR <- uSp <- uThresh <- uProd <- list()
@@ -373,14 +373,6 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     volAt120[[y]][index] <- v120
     
     
-    
-    # ##saving volAt120 for testing purposes
-    # save(v120, file = paste0(outputDir, "v120_", y, ".RData"))
-    # ## saving IDR100 for testing purposes
-    # save(IDR100, file = paste0(outputDir, "IDR100_", y, ".RData"))
-    # ## saving IDR100 for testing purposes
-    # save(p, file = paste0(outputDir, "salvPlant_", y, ".RData"))
-    # 
     ####################### updating tsd (do after updating density)
     tsd[f] <- 0
     #######################  resetting burned stands to 0 basal area
@@ -396,6 +388,8 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     
     
     rm(f)
+    rm(v120)
+    rm(index)
     
     ##### eligible to harvest at a given timestep
     eligible <- tsd > matThresh &
@@ -494,7 +488,7 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
         #  that stands burned 
         
         ### scan levels of retention to assure 50 cubic-m at 120 yrs old in case of fire (brute force)
-        propRetenVals <- seq(.05, 1, 0.05)
+        propRetenVals <- seq(0, 1, 0.05)
         seedlingDens <- matrix(NA,
                                nrow = length(g),
                                ncol = length(propRetenVals))
@@ -560,7 +554,7 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     ### aging landscape for next year
     age[[y]] <- tsd
     tsd <- tsd + 1
-    
+    rm(index)
     
   }
   

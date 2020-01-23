@@ -81,7 +81,7 @@ require(doSNOW)
 require(parallel)
 require(foreach)
 # clusterN <- 2
-clusterN <-  12#max(1, floor(0.9*detectCores()))  ### choose number of nodes to add to cluster.
+clusterN <-  max(1, floor(0.9*detectCores()))  ### choose number of nodes to add to cluster.
 #######
 cl = makeCluster(clusterN, outfile = "") ##
 registerDoSNOW(cl)
