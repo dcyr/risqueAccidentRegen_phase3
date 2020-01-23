@@ -70,7 +70,7 @@ outputCompiled <- foreach(i = seq_along(x), .combine = "rbind") %dopar% {# seq_a
     ## compiling realized harvests
     areaHarvested <- t(zonal(harv > 0, uaf,  "sum")[,-1]) * convFactor
     volHarvested <- t(zonal(harv, uaf,  "sum")[,-1]) * convFactor
-    
+    rm(harv)
     
     
     areaHarvested <- data.frame(areaHarvested, total = apply(areaHarvested, 1, "sum"))
@@ -103,6 +103,8 @@ outputCompiled <- foreach(i = seq_along(x), .combine = "rbind") %dopar% {# seq_a
         
         areaSalvaged <- t(zonal(salv > 0, uaf,  "sum")[,-1]) * convFactor
         volSalvaged <- t(zonal(salv, uaf,  "sum")[,-1]) * convFactor
+        rm(salv)
+        
         
         areaSalvaged <- data.frame(areaSalvaged, total = apply(areaSalvaged, 1, "sum"))
         volSalvaged <- data.frame(volSalvaged, total = apply(volSalvaged, 1, "sum"))
@@ -137,6 +139,7 @@ outputCompiled <- foreach(i = seq_along(x), .combine = "rbind") %dopar% {# seq_a
         
         areaReten <- t(zonal(reten > 0, uaf,  "sum")[,-1]) * convFactor
         volReten <- t(zonal(reten, uaf,  "sum")[,-1]) * convFactor
+        rm(reten)
         
         areaReten <- data.frame(areaReten, total = apply(areaReten, 1, "sum"))
         volReten <- data.frame(volReten, total = apply(volReten, 1, "sum"))
@@ -170,6 +173,7 @@ outputCompiled <- foreach(i = seq_along(x), .combine = "rbind") %dopar% {# seq_a
         plant <- get(load(plant)) 
         
         areaPlant <- t(zonal(plant > 0, uaf,  "sum")[,-1]) * convFactor
+        rm(plant)
         
         areaPlant <- data.frame(areaPlant, total = apply(areaPlant, 1, "sum"))
         

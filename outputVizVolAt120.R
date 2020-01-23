@@ -2,7 +2,7 @@
 ###################################################################################################
 ##### Visualizing the evolution volumes at 120 y.old (indicator of landscape productivity)
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario"))])
+rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario", "initYear"))])
 # setwd("D:/regenFailureRiskAssessmentData_phase2/2018-10-23")
 # wwd <- paste(getwd(), Sys.Date(), sep = "/")
 # dir.create(wwd)
@@ -12,13 +12,11 @@ require(raster)
 require(ggplot2)
 require(dplyr)
 require(reshape2)
-initYear <- 2015
+
 ####################################################################
 ####################################################################
 ######
-studyArea <- raster("../studyArea.tif")
-subZone <- raster("../subZones.tif")
-subZone_RAT <- read.csv("../subZones_RAT.csv")
+
 ##
 
 # uaf <- raster("../uaf.tif")
@@ -28,7 +26,17 @@ subZone_RAT <- read.csv("../subZones_RAT.csv")
 ####################################################################
 ######
 ### fetching compiled results
-outputCompiled <- get(load(paste0("outputCompiledVolAt120Cls_", scenario, ".RData")))
+for (s in scenario) {
+    
+    studyArea <- raster(paste0("../", s, "/studyArea.tif"))
+    subZone <- raster(paste0("../", s, "/subZones.tif"))
+    subZone_RAT <- read.csv(paste0("../", s, "/subZones_RAT.csv"))
+    
+    outputCompiled <- get(load(paste0("../outputCompiled/outputCompiledVolAt120Cls_", s, ".RData")))
+    
+}
+
+
 
 nSims <- nrow(distinct(outputCompiled, scenario, replicate))
 

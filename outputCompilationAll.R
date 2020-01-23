@@ -3,10 +3,11 @@
 ##### Visualizing everything
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
 rm(list = ls())
-setwd("D:/test/risqueAccidentRegen_phase3/test_150yrs_RCP85/")
+setwd("D:/test/risqueAccidentRegen_phase3")
+# setwd("D:/regenFailureRiskAssessmentData_phase2")
 # setwd("~/Sync/Travail/ECCC/regenFailureRiskAssessment_phase2/2018-11-29")
 ####################################################################################################
-scenario <- "RCP85"
+scenario <- c("baseline")#"baseline", scenario <- c("2019-01-07_coupe0.62_recup70_contrainteAge")
 ####################################################################################################
 sourceDir <- path.expand("~")
 sourceDir <- gsub("\\\\", "/", sourceDir) # necessary on some Windows machine
