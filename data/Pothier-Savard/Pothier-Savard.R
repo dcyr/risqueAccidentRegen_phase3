@@ -528,6 +528,8 @@ VFnc <- function(sp, Ac, iqs, rho100,
                      b43 = b43[match(.sp, names(.VCoef))],
                      b44 = b44[match(.sp, names(.VCoef))])
     
+    .index <- complete.cases(df)
+    
     df[,"Hd"] <- HdFnc(sp = .sp, Ac = .Ac, iqs = .iqs, HdCoef = .HdCoef)
     df[,"Dq"] <- DqFnc(sp = .sp, Ac = .Ac, iqs = .iqs, rho100 = .rho100,
                        HdCoef = .HdCoef, DqCoef = .DqCoef,
@@ -540,7 +542,8 @@ VFnc <- function(sp, Ac, iqs, rho100,
     
 
     x <- apply(df, 1, function(x)  x["b41"] * x["Hd"]^x["b42"] * x["G"]^x["b43"] * x["Dq"]^x["b44"])
-    x[which(df$iqs == 0)] <- 0
+    x[which(.index & is.na(x))] <- 0
+
     if(.merchantable) {
         x[which(df$Dq < 9)] <- 0 
     }
