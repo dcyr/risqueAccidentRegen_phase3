@@ -57,6 +57,7 @@ clusterN <- min(nRep, clusterN)
 
 #######
 verbose <- T
+logFile <- T
 outputDir <-  paste(getwd(), "output/", sep = "/")
 dir.create(outputDir)
 
@@ -69,18 +70,21 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   .packages= names(sessionInfo()$otherPkgs),
   .verbose = T) %dopar%  {
   
-  require(stringr) 
+  require(stringr)
+  simID <- str_pad(i, nchar(nRep-1), pad = "0")
   ### workaround on Windows system to avoid multiple instances trying to access
   ### the same files at the same time
   if(i < clusterN) {
     Sys.sleep(2*(i %% clusterN))
   }
   
-  simID <- str_pad(i, nchar(nRep-1), pad = "0")
+  if(logFile) {
+    con <- file(paste0(outputDir, "sim_", simID, ".log"))
+    sink(con)
+    sink(con, type = "message")
+  }
   
-  con <- file(paste0(outputDir, "sim_", simID, ".log"))
-  sink(con)
-  sink(con, type = "message")
+ 
   tStart <- Sys.time()
 
   
@@ -149,12 +153,12 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   Ac <- a - t1[index] 
   r100 <- IDR100[index]
   ##
-  volAt120 <- volInit <- coverTypes
-  volAt120[] <- volInit[] <- NA
-  volAt120[index] <- VFnc(sp = sp, Ac = ageRefCorr, iqs = iqs, rho100 = r100,
+  volAt120Init <- volInit <- coverTypes
+  volAt120Init[] <- volInit[] <- NA
+  volAt120Init[index] <- VFnc(sp = sp, Ac = ageRefCorr, iqs = iqs, rho100 = r100,
                           rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef, DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
                           scenesCoef = NULL, withSenescence = F)
-  volAt120 <- round(volAt120, 1)
+  volAt120Init <- round(volAt120Init, 1)
   ## current volume 
   volInit[index] <- VFnc(sp = sp, Ac = Ac, iqs = iqs, rho100 = r100,
                          rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef, DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
@@ -164,7 +168,7 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   stSetAside <- volSetAside <- coverTypes  
   stSetAside[!is.na(stSetAside)] <- volSetAside[!is.na(volSetAside)] <- 0
   
-  writeRaster(volAt120, file = paste0(outputDir, "volAt120Init_",simID, ".tif"), overwrite = T)
+  writeRaster(volAt120Init, file = paste0(outputDir, "volAt120Init_",simID, ".tif"), overwrite = T)
   writeRaster(volInit, file = paste0(outputDir, "volInit_",simID, ".tif"), overwrite = T)
   
   rm(iqs, sp, a, Ac, r100, volInit, index)
@@ -203,9 +207,9 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   ###########################
   
   ## variable stand attributes (stored)
-  fire <- harv <- age <- salv <- plant <- rho100 <- reten <- list()
+  fire <- harv <- age <- salv <- plant <- rho100 <- reten <- volAt120 <- list()
   
-  volAt120 <- list(volAt120)
+  
   
   fr <- filter(fireRegime, scenario == scen)
   for (y in 1:simDuration) {#simDuration) {### change into foreach, and return 'fire' 'harv' and 'age' as a list, then reformat
@@ -246,7 +250,6 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     sp <- sp_extract()
     r100 <- IDR100_extract()
     ## age at 1m
-    
     Ac <- ac_extract(a = a,
                      sp = sp,
                      iqs = iqs,
@@ -358,26 +361,34 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     rho100[[y]] <- IDR100
     
     ### new vol at 120
-    v120 <- VFnc(sp = sp, Ac = ageRef[index]-t1[index],
-                 iqs = iqs, rho100 = x,
-                 rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef,
-                 DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
-                 scenesCoef = NULL, withSenescence = F)
-    v120 <- round(v120, 1)
-    
-    
-    ### creating new raster layer
-    if(y > 1) {
-      volAt120[[y]] <- volAt120[[y-1]]
+    if(y == 1) {
+      v120 <- volAt120Init
+    } else {
+      v120 <- volAt120[[y-1]]
     }
-    volAt120[[y]][index] <- v120
     
+    v120[index] <- round(VFnc(sp = sp, Ac = Ac,
+                                iqs = iqs, rho100 = x,
+                                rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef,
+                                DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
+                                scenesCoef = NULL, withSenescence = F),
+                           1)
+
+
+    ### creating new raster layer
+    volAt120[[y]] <- v120
     
+    # cbind(v120[[y]][index], v120)
     ####################### updating tsd (do after updating density)
     tsd[f] <- 0
     #######################  resetting burned stands to 0 basal area
     stSetAside[index] <- 0
     
+    
+    ####################### removing stand attributes and others
+    suppressWarnings(
+      rm(f, v120, index, iqs, a, sp, r100, Ac, Hd, v, foo)
+    )
     
     ########################################################################
     ####################### simulating harvest
@@ -387,9 +398,7 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     }
     
     
-    rm(f)
-    rm(v120)
-    rm(index)
+
     
     ##### eligible to harvest at a given timestep
     eligible <- tsd > matThresh &
@@ -447,7 +456,7 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     iqs <- iqs_extract(stands = x)
     a <- age_extract(stands = x)
     sp <- sp_extract(stands = x)
-    t1 <- round(tFnc(sp, iqs, tCoef))
+    # t1 <- round(tFnc(sp, iqs, tCoef))
     r100 <- IDR100_extract(stands = x)
     ## age at 1m
     
@@ -554,7 +563,10 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     ### aging landscape for next year
     age[[y]] <- tsd
     tsd <- tsd + 1
-    rm(index)
+    ####################### removing stand attributes and others
+    suppressWarnings(
+      rm(v120, index, iqs, a, sp, r100, Ac, Hd, v, foo)
+    )
     
   }
   
@@ -637,8 +649,10 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   print("##############################################################")
   print(paste0("Simulation #", i, " completed ", Sys.time()-tStart))
   print("##############################################################")
-  sink()
-  sink(type = "message")
+  if(logFile) {
+    sink()
+    sink(type = "message")
+  }
 }
 
 stopCluster(cl)
