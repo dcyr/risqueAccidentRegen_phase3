@@ -63,6 +63,19 @@ for (s in scenario) {
         volAt120 <- stack(volAt120Init, volAt120)
         
         volAt120 <- values(volAt120)
+        
+        ### once a value has been replace with a zero, assume that any previous NA's was also a 'zero' value
+        for (j in ncol(volAt120):2) {
+            
+            isZero <- volAt120[,j] == 0
+            isNA <- is.na(volAt120[,j-1])
+            
+            index <- which(isZero & isNA)
+            ## replace values
+            volAt120[index,j-1] <- 0
+            
+        }
+        
         volAt120Cls <- apply(volAt120, 2, function(x) cut(x, include.lowest = T, right = F, breaks=c(0, 30, 50, 80, 999)))
        
         out <- list()

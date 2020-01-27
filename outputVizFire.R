@@ -25,10 +25,10 @@ require(ggplot2)
 #############################################################
 output <- list()
 fireRegime <- list()
-for (s in c("baseline", "RCP85")) {
+for (s in scenario) {
     
     ### fetching outputs
-    output[[s]] <- get(load(paste0("../outputCompiled/outputCompiledFire_", s, ".RData")))
+    output[[s]] <- get(load(paste0(paste0("../", "outputCompiled/outputCompiledFire_", s, ".RData"))))
     
     ## fetching fire regimes
     x <- read.csv(paste0("../", s, "/fireRegime.csv"))
