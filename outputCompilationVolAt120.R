@@ -2,7 +2,7 @@
 ###################################################################################################
 ##### Compiling relative density outputs to tidy data frames
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario"))])
+rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario", "clusterN"))])
 #######
 # rm(list = ls())
 # setwd("D:/regenFailureRiskAssessmentData_phase2/2018-10-29")
@@ -36,7 +36,7 @@ for (s in scenario) {
     require(parallel)
     require(foreach)
     # clusterN <- 2
-    clusterN <- max(1, floor(0.5*detectCores()))  ### choose number of nodes to add to cluster.
+    # clusterN <- max(1, floor(0.5*detectCores()))  ### choose number of nodes to add to cluster.
     #######
     cl = makeCluster(clusterN, outfile = "") ##
     registerDoSNOW(cl)

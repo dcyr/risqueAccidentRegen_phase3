@@ -2,7 +2,7 @@
 ###################################################################################################
 ##### Compiling raw fire outputs to a tidy data frame
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario"))])
+rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario", "clusterN"))])
 # #######
 # rm(list = ls())
 # setwd("D:/test/risqueAccidentRegen_phase3/100rep_baseline/")
@@ -22,8 +22,8 @@ require(dplyr)
 
 ####################################################################
 
-studyArea <- raster("../studyArea.tif")
-fireZones <- raster("../fireZones.tif")
+studyArea <- raster(paste0("../", scenario, "/studyArea.tif"))
+fireZones <- raster(paste0("../", scenario, "/fireZones.tif"))
 
 ## focusing on fireZones in studyArea
 z <- which(zonal(studyArea, fireZones, sum)[,"value"]>1)
@@ -45,7 +45,7 @@ colnames(fireZoneArea) <- c("ID", "areaZoneTotal_ha")
 ######
 ######      compiling simulation outputs
 ######
-outputFolder <- "../output"
+outputFolder <- paste0("../", scenario, "/output")
 x <- list.files(outputFolder)
 
 index <- grep(".RData", x)
@@ -64,7 +64,7 @@ require(doSNOW)
 require(parallel)
 require(foreach)
 # clusterN <- 2
-clusterN <-  max(1, floor(0.9*detectCores()))  ### choose number of nodes to add to cluster.
+# clusterN <-  max(1, floor(0.9*detectCores()))  ### choose number of nodes to add to cluster.
 #######
 cl = makeCluster(clusterN, outfile = "") ##
 registerDoSNOW(cl)

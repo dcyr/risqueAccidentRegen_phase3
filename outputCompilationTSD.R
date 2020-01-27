@@ -2,7 +2,7 @@
 ###################################################################################################
 ##### Compiling raw harvest outputs to a tidy data frame
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario"))])
+rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario", "clusterN"))])
 # #####
 # rm(list = ls())
 # setwd("D:/regenFailureRiskAssessmentData_phase2/2018-10-29_coupe0.62_recup70")
@@ -21,19 +21,19 @@ require(raster)
 require(dplyr)
 
 ####################################################################
-studyArea <- raster("../studyArea.tif")
-uaf <- raster("../uaf.tif")
-uaf_RAT <- read.csv("../uaf_RAT.csv")
-subZones <- raster("../subZones.tif")
-subZones_RAT <- read.csv("../subZones_RAT.csv")
-coverTypes <- raster("../coverTypes.tif")
+studyArea <- raster(paste0("../", scenario, "/studyArea.tif"))
+uaf <- raster(paste0("../", scenario, "/uaf.tif"))
+uaf_RAT <- read.csv(paste0("../", scenario, "/uaf_RAT.csv"))
+subZones <- raster(paste0("../", scenario, "/subZones.tif"))
+subZones_RAT <- read.csv(paste0("../", scenario, "/subZones_RAT.csv"))
+coverTypes <- raster(paste0("../", scenario, "/coverTypes.tif"))
 ##
 convFactor <- prod(res(studyArea))/10000### to convert to hectares
 
 
 ###################################################################
 ## loading management plan (to fetch age structure targets, and productive cover types )
-managementPlan <- get(load("../managementPlan.RData"))
+managementPlan <- get(load(paste0("../", scenario, "/managementPlan.RData")))
 plan <- managementPlan$baseline
 ## eligible to harvest
 harvEligible <- uaf %in% plan$uaf &
@@ -65,7 +65,7 @@ eligibleArea <- rbind(eligibleArea,
 ######
 ######      compiling simulation outputs
 ######
-outputFolder <- "../output"
+outputFolder <- paste0("../", scenario, "/output")
 x <- list.files(outputFolder)
 index <- grep(".RData", x)
 index <- intersect(index, grep("TSD", x))
@@ -81,7 +81,7 @@ require(doSNOW)
 require(parallel)
 require(foreach)
 # clusterN <- 2
-clusterN <-  max(1, floor(0.9*detectCores()))  ### choose number of nodes to add to cluster.
+# clusterN <-  max(1, floor(0.9*detectCores()))  ### choose number of nodes to add to cluster.
 #######
 cl = makeCluster(clusterN, outfile = "") ##
 registerDoSNOW(cl)
