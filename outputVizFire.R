@@ -12,7 +12,6 @@ rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario", "initYear"))])
 #require(rgdal)
 # require(raster)
 #require(rgeos)
-require(dplyr)
 ####################################################################
 ####################################################################
 ######
@@ -38,7 +37,7 @@ for (s in scenario) {
     midPoint <- strsplit(as.character(x$period), "-")
     x[, "year"] <- round(as.numeric(lapply(midPoint, function(x) mean(as.numeric(x)))) - initYear)
     x <- x %>% 
-        select(scenario, fireCycle, year)
+        dplyr::select(scenario, fireCycle, year)
     ### add plateau if necessary
     x <- rbind(x,
                data.frame(year = seq(from = max(x$year),
@@ -72,7 +71,7 @@ require(dplyr)
 ## create data frame with annual data
 df <- output %>%
     mutate(propAAB = areaBurned_ha/areaZoneTotal_ha) %>%
-    select(scenario, replicate, year, areaBurned_ha, areaZoneTotal_ha, propAAB)
+    dplyr::select(scenario, replicate, year, areaBurned_ha, areaZoneTotal_ha, propAAB)
 write.csv(df, file = paste0("fireSummary.csv"), row.names = F)
 
 ## global summary
