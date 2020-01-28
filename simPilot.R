@@ -42,7 +42,7 @@ source("../scripts/standAttribExtract.R")
 nRep <- 100
 simDuration <- 150
 simStartYear <- 2015
-scen <- "baseline" #c("baseline", "RCP85")
+scen <- "RCP85" #c("baseline", "RCP85")
 ################################################################################
 tsdInit <- tsd
 IDR100Init <- IDR100

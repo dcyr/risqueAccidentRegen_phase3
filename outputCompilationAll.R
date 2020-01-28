@@ -7,7 +7,7 @@ setwd("D:/test/risqueAccidentRegen_phase3")
 # setwd("D:/regenFailureRiskAssessmentData_phase2")
 # setwd("~/Sync/Travail/ECCC/regenFailureRiskAssessment_phase2/2018-11-29")
 ####################################################################################################
-scenario <- c("baseline")#"baseline", scenario <- c("2019-01-07_coupe0.62_recup70_contrainteAge")
+scenario <- c("RCP85")#"baseline", scenario <- c("2019-01-07_coupe0.62_recup70_contrainteAge")
 ####################################################################################################
 sourceDir <- path.expand("~")
 sourceDir <- gsub("\\\\", "/", sourceDir) # necessary on some Windows machine
@@ -19,8 +19,8 @@ wwd <- paste(getwd(), Sys.Date(), sep = "/")
 dir.create(wwd)
 setwd(wwd)
 ## use eval() and parse() instead of source() to deal with special character under Windows.
-# eval(parse(paste(sourceDir, "outputCompilationFire.R", sep = "/"), encoding = 'UTF-8'))
-# eval(parse(paste(sourceDir, "outputCompilationHarvest.R", sep = "/"), encoding = 'UTF-8'))
-# eval(parse(paste(sourceDir, "outputCompilationTSD.R", sep = "/"), encoding = 'UTF-8'))
+eval(parse(paste(sourceDir, "outputCompilationFire.R", sep = "/"), encoding = 'UTF-8'))
+eval(parse(paste(sourceDir, "outputCompilationHarvest.R", sep = "/"), encoding = 'UTF-8'))
+eval(parse(paste(sourceDir, "outputCompilationTSD.R", sep = "/"), encoding = 'UTF-8'))
 eval(parse(paste(sourceDir, "outputCompilationVolAt120.R", sep = "/"), encoding = 'UTF-8'))
 #eval(parse(paste(sourceDir, "outputCompilationVolAt120Trans.R", sep = "/"), encoding = 'UTF-8'))
