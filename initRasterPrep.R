@@ -268,8 +268,7 @@ depositCodes <- list(shallow = c("R", "R1A", "R4GA", "R7T",
                      clay = c("4GA", "4GAM", "4GAY"),
                      organic = c("7E", "7T", "7TM", "7TY"))
 
-stored <- character()
-stored <- append(stored, depositCodes)
+#stored <- append(stored, depositCodes)
 drainageCodes <- list(Mesic = c("00", "10", "11", "16",
                                 "20", "21", "23", "24",
                                 "30", "31"),
@@ -362,7 +361,6 @@ hli[is.na(coverTypes)] <- prodPot[is.na(coverTypes)] <- preTot[is.na(coverTypes)
     dens[is.na(coverTypes)] <- NA
 
 
-stored <- c("stored")
 ## study area
 writeRaster(studyArea, file = "studyArea.tif", overwrite = T)
 save(studyAreaP, file = "studyAreaP.RData")

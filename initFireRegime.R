@@ -5,7 +5,7 @@
 ### logNormal fit for fire size distribution
 
 fireObs <- read.csv("../data/fireObs.csv", header=TRUE)
-thresh <- 125
+thresh <- prod(res(studyArea))/10000
 df <- fireObs[fireObs$areaTotal_ha>thresh,]
 
 fireSizeDist <- round(df$areaTotal_ha)
@@ -33,7 +33,7 @@ fireProj <- get(load("../data/FireProjections_Boulanger2016.RData"))
 baselineFC <- 101
 proj1st <- 2056
 breaks <- seq(2010, 2100, 5)
-scen <- "RCP85"
+scenProg <- "RCP85"
 ##########
 fireRegime <- distinct(fireRegime, ID, Zone_LN, scenario) %>%
     mutate(fireCycle = baselineFC,
@@ -44,7 +44,7 @@ breakNames <- paste((breaks+1)[-length(breaks)], breaks[-1], sep = "-")
 
 fireProj <- fireProj %>%
     filter(ZONES == 7,
-           scenario == scen,
+           scenario == scenProg,
            Year >= proj1st)
 
 fireProj <- fireProj[,c("Year", "AdjustedBurnRate")]
@@ -65,7 +65,7 @@ fireProj <- fireProj %>%
               fireCycle= round(1/PAAB)) %>%
     as.data.frame() %>%
     mutate(period = breakNames[as.numeric(period)],
-           scenario = scen)
+           scenario = scenProg)
 
 fireProj <- fireProj[,c("period", "fireCycle")]
 
@@ -73,7 +73,7 @@ fireProj <- fireProj[,c("period", "fireCycle")]
 
 fireRegime <- expand.grid(ID = fireRegime$ID,
                           period = fireProj$period,
-                          scenario = scen) %>%
+                          scenario = scenProg) %>%
     merge(fireRegime[,c("ID", "Zone_LN")]) %>%
     merge(fireProj) %>%
     rbind(fireRegime) %>%

@@ -15,6 +15,14 @@
 wwd <- paste(getwd(), Sys.Date(), sep = "/")
 dir.create(wwd)
 setwd(wwd)
+
+################################################################################
+################################################################################
+nRep <- 100
+simDuration <- 150
+simStartYear <- 2015
+scen <- "baseline" #c("baseline", "RCP85")
+stored <- c("stored", "nRep", "simDuration", "simStartYear", "scen")
 ################################################################################
 ################################################################################
 require(raster)
@@ -25,7 +33,6 @@ source("../initRasterPrep.R")
 source("../initRegenPrep.R")
 ## Reading management scenarios
 print(paste0("Preparing MANAGEMENT SCENARIOS from source file: ", normalizePath("../"), "initHarvest.R"))  
-
 source("../initHarvest.R")
 save(managementPlan, file = "managementPlan.RData")
 ## Sourcing fire engine & Loading fire regime(s)
@@ -37,12 +44,7 @@ psDir <- "../data/Pothier-Savard"
 source(paste(psDir, "Pothier-Savard.R", sep = "/"))
 ## Loading yield curves (and other forestry equations)
 source("../scripts/standAttribExtract.R")
-################################################################################
-################################################################################
-nRep <- 100
-simDuration <- 150
-simStartYear <- 2015
-scen <- "RCP85" #c("baseline", "RCP85")
+
 ################################################################################
 tsdInit <- tsd
 IDR100Init <- IDR100
