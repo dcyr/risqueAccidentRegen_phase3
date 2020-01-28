@@ -6,7 +6,7 @@ rm(list = ls())
 setwd("D:/test/risqueAccidentRegen_phase3/")
 # setwd("~/Sync/Travail/ECCC/regenFailureRiskAssessment_phase2/2018-11-29")
 ####################################################################################################
-scenario <- c("baseline")# c("baseline", "RCP85")
+scenario <- c("RCP85")# c("baseline", "RCP85")
 initYear <- 2015
 ####################################################################################################
 sourceDir <- path.expand("~")

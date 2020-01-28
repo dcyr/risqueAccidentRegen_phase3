@@ -7,7 +7,7 @@ setwd("D:/test/risqueAccidentRegen_phase3")
 # setwd("D:/regenFailureRiskAssessmentData_phase2")
 # setwd("~/Sync/Travail/ECCC/regenFailureRiskAssessment_phase2/2018-11-29")
 ####################################################################################################
-scenario <- c("baseline")#"baseline", scenario <- c("2019-01-07_coupe0.62_recup70_contrainteAge")
+scenario <- c("RCP85")#"baseline", scenario <- c("2019-01-07_coupe0.62_recup70_contrainteAge")
 ####################################################################################################
 sourceDir <- path.expand("~")
 sourceDir <- gsub("\\\\", "/", sourceDir) # necessary on some Windows machine
@@ -23,7 +23,7 @@ require(doSNOW)
 require(parallel)
 require(foreach)
 # clusterN <- 2
-clusterN <-  max(1, floor(0.25*detectCores()))  ### choose number of nodes to add to cluster.
+clusterN <-  max(1, floor(0.5*detectCores()))  ### choose number of nodes to add to cluster.
 
 ## use eval() and parse() instead of source() to deal with special character under Windows.
 # eval(parse(paste(sourceDir, "outputCompilationFire.R", sep = "/"), encoding = 'UTF-8'))
