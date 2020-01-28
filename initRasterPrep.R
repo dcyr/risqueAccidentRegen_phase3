@@ -27,8 +27,18 @@ studyAreaP <- get(load("../data/studyAreaP.RData"))
 #################
 #################
 #################
-uaf <- raster("../data/uaf.tif")
 uaf_RAT <- read.csv("../data/uaf_RAT.csv") 
+if(!noUAF) {
+  uaf <- raster("../data/uaf.tif") ###
+} else {
+  uaf <- studyArea
+  uaf_RAT <- uaf_RAT[1,]
+  uaf_RAT[,"value"] <- "total"
+}
+
+
+
+
 #################
 #################
 subZones <- raster("../data/subZones.tif")
@@ -45,6 +55,7 @@ fireZones_RAT <- read.csv("../data/fireZonesRAT.csv")
 # species composition
 TYPE_COUV <- raster("../data/Inv/TYPE_COUV.tif")
 TYPE_COUV_RAT <- read.csv("../data/Inv/TYPE_COUV_RAT.csv")
+
 GR_ESS <- raster("../data/Inv/GR_ESS.tif")
 GR_ESS_RAT <- read.csv("../data/Inv/GR_ESS_RAT.csv")
 REB_ESS1 <- raster("../data/Inv/REB_ESS1.tif")
@@ -209,15 +220,17 @@ GR_ESS_RAT[, "coverType"] <- apply(GR_ESS_RAT, 1,
                                        ifelse(x["spMain"] %in% c("EN", "EP", "EE"), "EN",
                                               ifelse(x["spMain"] == "PG", "PG",
                                                      ifelse(substring(x["spMain"], 1,1) %in% c("F", "B", "P"), "F",
-                                                            ifelse(x["spMain"] %in% c("ML","MR","SB", "EB", "SE"), "R",
+                                                            ifelse(x["spMain"] %in% c("ML","MR","SB", "EB", "SE"), "EN", ### this was previously defined as 'R'
                                                                    NA)
                                                      )
                                               )
                                        )
                                    )
+stored <- append(stored, "GR_ESS_RAT")
 ### creating raster
 coverTypes <- GR_ESS
-coverTypes_RAT <- data.frame(ID = 1:4, value = c("EN", "PG", "F", "R"))
+coverTypes_RAT <- data.frame(ID = 1:3, value = c("EN", "PG", "F")) # c("EN", "PG", "F", "R")
+
 ct <- GR_ESS_RAT[match(values(GR_ESS), GR_ESS_RAT$ID), "coverType"]
 ct <- coverTypes_RAT[match(ct, coverTypes_RAT$value), "ID"] 
 coverTypes[] <- ct

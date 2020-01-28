@@ -56,36 +56,41 @@ df <- df[,3:ncol(df)]
 ###############################################################################################
 ## loading Permanent plots table
 pep <- read.csv("../data/PEP/Toutes_DB_5_6.csv")
-###############################################################################################
-## CoverTypes (same method as in 'initRasterPrep.R' recopied here)
-###############################################################################################
-GR_ESS <- pep$GR_ESS
-### just a quick scan of what we're dealing with...
-GR_ESS <- as.data.frame(table(GR_ESS))
-# GR_ESS_FREQ <- data.frame(GR_ESS_FREQ,
-#                           GR_ESS = GR_ESS_RAT[match(GR_ESS_FREQ[,"value"], GR_ESS_RAT$ID), "value"])
-GR_ESS <- GR_ESS[order(GR_ESS$Freq, decreasing = T),]
+# ###############################################################################################
+# ## CoverTypes (same method as in 'initRasterPrep.R' recopied here)
+# ###############################################################################################
+# GR_ESS <- pep$GR_ESS
+# ### just a quick scan of what we're dealing with...
+# GR_ESS <- as.data.frame(table(GR_ESS))
+# # GR_ESS_FREQ <- data.frame(GR_ESS_FREQ,
+# #                           GR_ESS = GR_ESS_RAT[match(GR_ESS_FREQ[,"value"], GR_ESS_RAT$ID), "value"])
+# GR_ESS <- GR_ESS[order(GR_ESS$Freq, decreasing = T),]
+# 
+# GR_ESS <- GR_ESS[!(GR_ESS$Freq == 0),]
+# GR_ESS[, "spMain"] <- substring(as.character(GR_ESS[,"GR_ESS"]), 1, 2)
+# 
+# 
+# ## Attributing cover type to species groups when possible
+# GR_ESS[, "coverType"] <- apply(GR_ESS, 1,
+#                                function(x)
+#                                    ifelse(x["spMain"] %in% c("EN", "EP", "EE"), "EN",
+#                                           ifelse(x["spMain"] == "PG", "PG",
+#                                                  ifelse(substring(x["spMain"], 1,1) %in% c("F", "B", "P"), "F",
+#                                                         ifelse(x["spMain"] %in% c("ML","MR","SB", "EB", "SE"), "R",
+#                                                                NA)
+#                                                         )
+#                                                  )
+#                                           )
+#                                )
+# 
+# GR_ESS <- GR_ESS[, c("GR_ESS","coverType")]
 
-GR_ESS <- GR_ESS[!(GR_ESS$Freq == 0),]
-GR_ESS[, "spMain"] <- substring(as.character(GR_ESS[,"GR_ESS"]), 1, 2)
+GR_ESS_codes <- GR_ESS_RAT %>%
+    mutate(GR_ESS = value) %>%
+    dplyr::select(GR_ESS, coverType)
 
-
-## Attributing cover type to species groups when possible
-GR_ESS[, "coverType"] <- apply(GR_ESS, 1,
-                               function(x)
-                                   ifelse(x["spMain"] %in% c("EN", "EP", "EE"), "EN",
-                                          ifelse(x["spMain"] == "PG", "PG",
-                                                 ifelse(substring(x["spMain"], 1,1) %in% c("F", "B", "P"), "F",
-                                                        ifelse(x["spMain"] %in% c("ML","MR","SB", "EB", "SE"), "R",
-                                                               NA)
-                                                        )
-                                                 )
-                                          )
-                               )
-GR_ESS <- GR_ESS[, c("GR_ESS","coverType")]
-
-pep <- merge(pep, GR_ESS)
-pep$coverType <- factor(pep$coverType)
+pep <- merge(pep, GR_ESS_codes)
+pep$coverType <- as.factor(pep$coverType)
 
 ### filtering out some plots  
 pep <- pep %>%
@@ -169,9 +174,9 @@ train <- data.frame(lat = pep$LATITUDE,
                     sD3 = ifelse(pep$surfDep == surfDep_RAT[3, "value"], 1, 0),
                     sD4 = ifelse(pep$surfDep == surfDep_RAT[4, "value"], 1, 0),
                     sD5 = ifelse(pep$surfDep == surfDep_RAT[5, "value"], 1, 0),
-                    cT2 = ifelse(pep$coverType == coverTypes_RAT[2, "value"], 1, 0),
-                    cT3 = ifelse(pep$coverType == coverTypes_RAT[3, "value"], 1, 0),
-                    cT4 = ifelse(pep$coverType == coverTypes_RAT[4, "value"], 1, 0),
+                    cT2 = ifelse(pep$coverType == as.character(coverTypes_RAT[2, "value"]), 1, 0),
+                    cT3 = ifelse(pep$coverType == as.character(coverTypes_RAT[3, "value"]), 1, 0),
+                    #cT4 = ifelse(pep$coverType == as.character(coverTypes_RAT[4, "value"]), 1, 0),
                     cD2 = ifelse(pep$CL_DENS == "C", 1, 0),
                     cD3 = ifelse(pep$CL_DENS == "D", 1, 0))
 
@@ -230,8 +235,8 @@ rhoDist <- data.frame(coverType = ifelse(round(train$cT2), "PG", "EN"),
 rhoDist <- rbind(rhoDist,
                  data.frame(coverType = ifelse(round(df$cT2), "PG",
                                                ifelse(round(df$cT3), "F",
-                                                      ifelse(round(df$cT4), "R",
-                                                             "EN"))),
+                                                      #ifelse(round(df$cT4), "R",
+                                                             "EN")),
                             surfDep = ifelse(round(df$sD2), "sand",
                                              ifelse(round(df$sD3), "till",
                                                     ifelse(round(df$sD4), "clay",
@@ -250,7 +255,7 @@ p <- ggplot(x, aes(x = rho, fill = group, colour = group)) +
     facet_wrap(~coverType) +
     scale_colour_manual(values = c(train = "darkorange", test = "lightblue")) +
     scale_fill_manual(values = c(train = "darkorange", test = "lightblue")) +
-    labs(title = "Distribution initiale des indices de densitÃ© relative Ã  100 ans (IDR100)",
+    labs(title = "Distribution initiale des indices de densité relative à 100 ans (IDR100)",
          x = "IDR100")#,
          #y = "IDR100\n") #+
     #coord_flip()
@@ -276,7 +281,7 @@ summaryStats <- x %>%
               IDR100_p75 = quantile(rho, 0.75),
               IDR100_p95 = quantile(rho, 0.95),
               n = n())
-as.data.frame(summaryStats)
+# as.data.frame(summaryStats)
 #######################################
 
 
@@ -553,3 +558,4 @@ stored <- append(stored, "seedlingQMapFit")
 
 ## clearing everything from memory except what's been put into 'stored' 
 rm(list = ls()[!ls() %in% stored])
+

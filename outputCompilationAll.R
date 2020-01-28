@@ -2,12 +2,17 @@
 ###################################################################################################
 ##### Visualizing everything
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
+
 rm(list = ls())
-setwd("D:/test/risqueAccidentRegen_phase3")
-# setwd("D:/regenFailureRiskAssessmentData_phase2")
-# setwd("~/Sync/Travail/ECCC/regenFailureRiskAssessment_phase2/2018-11-29")
+################################################################################
+home <- path.expand("~")
+home <- gsub("\\\\", "/", home) # necessary on some Windows machine
+home <- gsub("/Documents", "", home) # necessary on my Windows machine
+setwd(paste(home, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3/", sep ="/"))
+#setwd("D:/test/risqueAccidentRegen_phase3")
+
 ####################################################################################################
-scenario <- c("RCP85")#"baseline", scenario <- c("2019-01-07_coupe0.62_recup70_contrainteAge")
+scenario <- c("2020-01-28")#"baseline", scenario <- c("2019-01-07_coupe0.62_recup70_contrainteAge")
 ####################################################################################################
 sourceDir <- path.expand("~")
 sourceDir <- gsub("\\\\", "/", sourceDir) # necessary on some Windows machine

@@ -22,7 +22,8 @@ nRep <- 100
 simDuration <- 150
 simStartYear <- 2015
 scen <- "baseline" #c("baseline", "RCP85")
-stored <- c("stored", "nRep", "simDuration", "simStartYear", "scen")
+noUAF <- T 
+stored <- c("stored", "noUAF", "nRep", "simDuration", "simStartYear", "scen")
 ################################################################################
 ################################################################################
 require(raster)
@@ -59,7 +60,7 @@ clusterN <- min(nRep, clusterN)
 
 #######
 verbose <- T
-logFile <- T
+logFile <- F
 outputDir <-  paste(getwd(), "output/", sep = "/")
 dir.create(outputDir)
 
