@@ -2,7 +2,7 @@
 ###################################################################################################
 ##### Compiling raw harvest outputs to a tidy data frame
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario"))])
+rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario", "clusterN"))])
 # #######
 # rm(list = ls())
 # setwd("D:/test/risqueAccidentRegen_phase3/100rep_baseline/")
@@ -22,10 +22,10 @@ require(raster)
 require(dplyr)
 
 ####################################################################
-studyArea <- raster("../studyArea.tif")
-uaf <- raster("../uaf.tif")
+studyArea <- raster(paste0("../", scenario, "/studyArea.tif"))
+uaf <- raster(paste0("../", scenario, "/uaf.tif"))
 #subZones <- raster
-uaf_RAT <- read.csv("../uaf_RAT.csv")
+uaf_RAT <- read.csv(paste0("../", scenario, "/uaf_RAT.csv"))
 ##
 convFactor <- prod(res(studyArea))/10000### to convert to hectares
 
@@ -34,7 +34,7 @@ convFactor <- prod(res(studyArea))/10000### to convert to hectares
 ######
 ######      compiling simulation outputs
 ######
-outputFolder <- "../output"
+outputFolder <- paste0("../", scenario, "/output")
 x <- list.files(outputFolder)
 index <- grep(".RData", x)
 index <- intersect(index, grep("Harvest", x))
@@ -50,7 +50,7 @@ require(doSNOW)
 require(parallel)
 require(foreach)
 # clusterN <- 2
-clusterN <-  max(1, floor(0.9*detectCores()))  ### choose number of nodes to add to cluster.
+# clusterN <-  max(1, floor(0.9*detectCores()))  ### choose number of nodes to add to cluster.
 #######
 cl = makeCluster(clusterN, outfile = "") ##
 registerDoSNOW(cl)
