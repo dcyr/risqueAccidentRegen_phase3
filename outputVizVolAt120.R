@@ -26,25 +26,20 @@ require(reshape2)
 ####################################################################
 ######
 ### fetching compiled results
-outputCompiled <- list()
+output <- list()
 for (s in scenario) {
     
-    studyArea <- raster(paste0("../", s, "/studyArea.tif"))
-    subZone <- raster(paste0("../", s, "/subZones.tif"))
-    subZone_RAT <- read.csv(paste0("../", s, "/subZones_RAT.csv"))
-    
-    outputCompiled[[s]] <- get(load(paste0("../outputCompiled/outputCompiledVolAt120_", s, ".RData")))
-    
-
+    # studyArea <- raster(paste0("../", s, "/studyArea.tif"))
+    # subZone <- raster(paste0("../", s, "/subZones.tif"))
+    # subZone_RAT <- read.csv(paste0("../", s, "/subZones_RAT.csv"))
+    # 
+    output[[s]] <-  get(load(paste0("../outputCompiled/outputCompiledVolAt120_", s, ".RData")))
 }
 
-#outputCompiled <- do.call("rbind", outputCompiled)
-lvls <- c("[0,50)", "[50,80)", "[80,999]")
-outputCompiled$volAt120Cls <- as.character(outputCompiled$volAt120Cls)
-outputCompiled[which(outputCompiled$volAt120Cls %in% c("[0,30)", "[30,50)", "N/A")), "volAt120Cls"] <- lvls[1]
-outputCompiled$volAt120Cls <- factor(outputCompiled$volAt120Cls, levels = lvls)
+outputCompiled <- do.call("rbind", output)
 
-
+lvls <- levels(outputCompiled$volAt120Cls)
+outputCompiled[outputCompiled$volAt120Cls == "N/A", "volAt120Cls"] <- lvls[1]
 
 nSims <- nrow(distinct(outputCompiled, scenario, simID))
 
@@ -76,21 +71,21 @@ df <- outputCompiled %>%
 
 
 
-
-foo <- outputCompiled %>%
-    group_by(scenario, simID, year, coverType, volAt120Cls) %>%  # , subZone
-    summarize(area_ha = sum(area_ha)) %>%
-    # zone = ifelse(subZone %in% c("Conservation areas", "Productive forest - Not harvestable"),
-    #                      "Ineligible to harvest", "Eligible to harvest")) %>%
-    # 
-    group_by(scenario, simID, year) %>%
-    mutate(areaTotal_ha = sum(area_ha),
-           area_prop = area_ha/areaTotal_ha)  
-
+# 
+# foo <- outputCompiled %>%
+#     group_by(scenario, simID, year, coverType, volAt120Cls) %>%  # , subZone
+#     summarize(area_ha = sum(area_ha)) %>%
+#     # zone = ifelse(subZone %in% c("Conservation areas", "Productive forest - Not harvestable"),
+#     #                      "Ineligible to harvest", "Eligible to harvest")) %>%
+#     # 
+#     group_by(scenario, simID, year) %>%
+#     mutate(areaTotal_ha = sum(area_ha),
+#            area_prop = area_ha/areaTotal_ha)  
+# 
 #### testing outputs
 require(ggplot2)
-# cols <- c("skyblue4",  "orange", "darkgreen", "indianred4")
-cols <- c("skyblue4",  "darkgreen", "indianred4")
+cols <- c("skyblue4",  "orange", "darkgreen", "indianred4")
+# cols <- c("skyblue4",  "darkgreen", "indianred4")
 
 png(filename= paste0("volAt120.png"),
     width = 8, height = 4, units = "in", res = 600, pointsize=10)
@@ -100,11 +95,10 @@ options(scipen=999)
 
 ggplot(data = df, aes(x = 2015 + year, y = p50VolAt120Area_ha, colour = volAt120Cls)) +
     geom_line() +
-   # ?geom_ribbon()
     geom_ribbon(aes(ymin = p25VolAt120Area_ha, ymax=p75VolAt120Area_ha,
                         x=  2015 + year, fill = df$volAt120Cls), alpha = 0.25, colour = NA) +
     xlim(c(2015, 2065)) +
-    facet_wrap(~ coverType, nrow = 2, scales = "free_y") +
+    facet_grid(coverType ~ scenario, scales = "free_y") +
     labs(x = "",
          y = "Area (ha)") +
     scale_colour_manual("Vol. at 120 y.old",
@@ -139,17 +133,17 @@ ggplot(data = diffDf, aes(x = 2015 + year, y = p50areaVariation_prop * 100, colo
     # geom_line() +
     geom_smooth(span = 0.1, size = 0.6) +
     
-    # ?geom_ribbon()
-    # geom_ribbon(aes(ymin = p25VolAt120Area_ha, ymax=p75VolAt120Area_ha,
-    #                 x=  2015 + year, fill = df$volAt120Cls), alpha = 0.25, colour = NA) +
+    facet_grid(coverType ~ scenario, scales = "free_y") +
     xlim(c(2015, 2065)) +
-    facet_grid( ~ coverType, scales = "free_y") +
+    #facet_grid( ~ coverType, scales = "free_y") +
     labs(x = "",
          y = "Annual variation\n(% area)") +
     scale_colour_manual("Vol. at 120 y.old",values= cols) +
     #scale_fill_manual("I.C.95% ",values= c("skyblue4", "darkgreen", "indianred4")) +
     theme(strip.text.x = element_text(size = 7),
-          axis.text.x = element_text(angle = 45, hjust = 1)) 
+          axis.text.x = element_text(angle = 45, hjust = 1)) +
+    geom_hline(yintercept = 0, colour = "black", linetype = "dashed",
+                size = 0.5)
 
 dev.off()
 
@@ -182,7 +176,7 @@ ggplot(data = cumulDf, aes(x = 2015 + year, y = p50areaCumul_prop * 100, colour 
     # ?geom_ribbon()
     # geom_ribbon(aes(ymin = p25VolAt120Area_ha, ymax=p75VolAt120Area_ha,
     #                 x=  2015 + year, fill = df$volAt120Cls), alpha = 0.25, colour = NA) +
-    facet_grid( ~ coverType) +#, scales = "free_y") +
+    facet_grid(coverType ~ scenario, scales = "fixed") +
     labs(x = "",
          y = "Cumulative variation\n(% area)") +
     scale_colour_manual("Vol. at 120 y.old",values= cols) +
@@ -201,15 +195,19 @@ options(scipen=999)
 
 
 ggplot(data = cumulDf, aes(x = 2015 + year, y = p50areaCumul_ha, colour = volAt120Cls)) +
-    #geom_line() +
+    geom_hline(yintercept = 0,
+               linetype = "dashed",
+               colour = "black",
+               size = 0.5) +
     geom_smooth(span = 0.25) +
     # ?geom_ribbon()
     # geom_ribbon(aes(ymin = p25VolAt120Area_ha, ymax=p75VolAt120Area_ha,
     #                 x=  2015 + year, fill = df$volAt120Cls), alpha = 0.25, colour = NA) +
-    facet_grid(coverTypes ~ zone, scales = "fixed") +#, scales = "free_y") +
+    facet_grid(coverType ~ scenario, scales = "fixed") +
+    #facet_grid(coverTypes ~ zone, scales = "fixed") +#, scales = "free_y") +
     labs(x = "",
          y = "Cumulative variation\n(ha)") +
-    scale_colour_manual("Vol. at 120 y.old",values= c("skyblue4", "darkgreen", "indianred4")) +
+    scale_colour_manual("Vol. at 120 y.old",values= cols) +
     #scale_fill_manual("I.C.95% ",values= c("skyblue4", "darkgreen", "indianred4")) +
     theme(strip.text.x = element_text(size = 7),
           axis.text.x = element_text(angle = 45, hjust = 1)) 

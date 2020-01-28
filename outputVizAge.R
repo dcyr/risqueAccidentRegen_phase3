@@ -18,13 +18,23 @@ require(reshape2)
 # ######
 
 ### fetching compiled results
-outputCompiled <- get(load(paste0("outputCompiledAge_", scenario, ".RData")))
 
-nSims <- nrow(distinct(outputCompiled, scenario, replicate))
+### fetching compiled results
+output <- list()
+for (s in scenario) {
+    
+    output[[s]] <- get(load(paste0("../outputCompiled/outputCompiledAge_", s, ".RData")))
+    
+    
+}
+outputCompiled <- do.call("rbind", output)
+outputCompiled <- outputCompiled %>%
+    filter(uaf == "total")
+nSims <- nrow(distinct(outputCompiled, replicate))
 
 
 ## management plan
-managementPlan <- get(load("../managementPlan.RData"))
+managementPlan <- get(load(paste0("../", s, "/managementPlan.RData")))
 plan <- managementPlan$baseline
 regenMaxAge <- plan$regenMaxAge
 # oldMinProp <- plan$oldMinProp
@@ -36,8 +46,7 @@ targets <- data.frame(target = c(plan$regenMaxProp, plan$oldMinProp),
                       var = factor(ageLevels, levels = ageLevels))
 
 
-## reformating outputs
-outputCompiled <- filter(outputCompiled, uaf == "total")
+
 
 df  <-  outputCompiled %>%
     mutate(oldProp = oldArea_ha/managedAreaTotal_ha,
@@ -52,7 +61,7 @@ df <- melt(df, id.vars = c("uaf", "ID", "scenario", "replicate", "year"),
            value.name = "prop")
 
 write.csv(select(df, scenario, uaf, replicate, year, var, prop),
-          file = paste0("ageSummary_", scenario, ".csv"), row.names = F)
+          file = paste0("ageSummary.csv"), row.names = F)
 
 ## defining variables, and cleaning up names
 ageLevels <- c(paste0("Regenerating stands (<", regenMaxAge, " y.old)"),
@@ -105,7 +114,7 @@ p <- c(p.050 = "5%", p.250 = "25%", p.500 = "médiane", p.750 = "75%", p.950 = "9
 m <- ggplot(df, aes(x = year + 2015, y = 100*prop,
                     group = ID)) +
                     #linetype = percentile, colour = variable)) +
-    facet_grid(~ var) +
+    facet_grid(scenario ~ var) +
     geom_line(colour = "black", alpha = 0.1) +#
     geom_line(aes(y = 100*p50, group = 1),
               colour = "lightblue",
@@ -142,7 +151,7 @@ print(m + theme_dark() +
                 #plot.subtitle = element_text(size = rel(1)),
                 plot.caption = element_text(size = rel(0.65))) +
           
-          labs(title = "Structure d'Âge",
+          labs(title = "Structure d'âge",
                #subtitle = paste0(percentile, "e percentile"),
                subtitle = #paste0("En bleu sont illustrées les médianes et en jaune les percentiles ",
                    paste0("La médiane est illustrée en bleu tandis que les percentiles ",

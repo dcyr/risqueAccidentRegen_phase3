@@ -6,7 +6,7 @@ rm(list = ls())
 setwd("D:/test/risqueAccidentRegen_phase3/")
 # setwd("~/Sync/Travail/ECCC/regenFailureRiskAssessment_phase2/2018-11-29")
 ####################################################################################################
-scenario <- c("RCP85")# c("baseline", "RCP85")
+scenario <- c("baseline", "RCP85")# 
 initYear <- 2015
 ####################################################################################################
 sourceDir <- path.expand("~")
@@ -21,7 +21,6 @@ setwd(wwd)
 eval(parse(paste(sourceDir, "outputVizFire.R", sep = "/"), encoding = 'UTF-8'))
 eval(parse(paste(sourceDir, "outputVizHarvest.R", sep = "/"), encoding = 'UTF-8'))
 eval(parse(paste(sourceDir, "outputVizVolAt120.R", sep = "/"), encoding = 'UTF-8'))
-# eval(parse(paste(sourceDir, "outputVizHarvest_pastille.R", sep = "/"), encoding = 'UTF-8'))
-# eval(parse(paste(sourceDir, "outputVizAge.R", sep = "/"), encoding = 'UTF-8'))
+eval(parse(paste(sourceDir, "outputVizAge.R", sep = "/"), encoding = 'UTF-8'))
 
 # eval(parse(paste(sourceDir, "resultsTransitionMatrix.R", sep = "/"), encoding = 'UTF-8')) 
