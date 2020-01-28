@@ -23,7 +23,7 @@ require(doSNOW)
 require(parallel)
 require(foreach)
 # clusterN <- 2
-clusterN <-  max(1, floor(0.25*detectCores()))  ### choose number of nodes to add to cluster.
+clusterN <-  max(1, floor(0.5*detectCores()))  ### choose number of nodes to add to cluster.
 
 ## use eval() and parse() instead of source() to deal with special character under Windows.
 eval(parse(paste(sourceDir, "outputCompilationFire.R", sep = "/"), encoding = 'UTF-8'))
