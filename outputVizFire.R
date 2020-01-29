@@ -24,16 +24,21 @@ require(ggplot2)
 #############################################################
 output <- list()
 fireRegime <- list()
-for (s in scenario) {
+
+simID <- strsplit(scenario, "_")
+fr <- as.character(lapply(simID, function(x) x[[1]]))
+mgmt <- as.character(lapply(simID, function(x) x[[2]]))
+
+for (s in seq_along(scenario)) {
     
     ### fetching outputs
-    output[[s]] <- get(load(paste0(paste0("../", "outputCompiled/outputCompiledFire_", s, ".RData"))))
+    output[[scenario[s]]] <- get(load(paste0(paste0("../", "outputCompiled/outputCompiledFire_", mgmt[s], ".RData"))))
     
     ## fetching fire regimes
-    x <- read.csv(paste0("../", s, "/fireRegime.csv"))
+    x <- read.csv(paste0("../", scenario[s], "/fireRegime.csv"))
     x <- x %>%
         distinct(scenario, period, fireCycle) %>%
-        filter(scenario == s)
+        filter(scenario == fr[s])
     midPoint <- strsplit(as.character(x$period), "-")
     x[, "year"] <- round(as.numeric(lapply(midPoint, function(x) mean(as.numeric(x)))) - initYear)
     x <- x %>% 
@@ -44,10 +49,10 @@ for (s in scenario) {
                                      to = max(output[[s]]$year),
                                      by = 5),
                           fireCycle = x[which.max(x$year), "fireCycle"],
-                          scenario = s))
+                          scenario = fr[s]))
     
-    
-    fireRegime[[s]] <- x
+    x <- distinct(x)
+    fireRegime[[scenario[s]]] <- x
     
 }
 output <- do.call("rbind", output)
