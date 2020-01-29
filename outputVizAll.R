@@ -7,12 +7,18 @@ rm(list = ls())
 home <- path.expand("~")
 home <- gsub("\\\\", "/", home) # necessary on some Windows machine
 home <- gsub("/Documents", "", home) # necessary on my Windows machine
-setwd(paste(home, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3/", sep ="/"))
-#setwd("D:/test/risqueAccidentRegen_phase3")
+# setwd(paste(home, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3/", sep ="/"))
+setwd("D:/test/risqueAccidentRegen_phase3")
 
 ####################################################################################################
-scenario <- "baseline_2020-01-28"##c("baseline", "RCP85")# 
+scenario <- c("baseline_noAUF-noTarget-test")##c("baseline", "RCP85")# 
 initYear <- 2015
+
+simInfo <- strsplit(scenario, "_")
+fr <- as.character(lapply(simInfo, function(x) x[[1]]))
+mgmt <- as.character(lapply(simInfo, function(x) x[[2]]))
+rm(simInfo)
+
 
 ####################################################################################################
 sourceDir <- path.expand("~")

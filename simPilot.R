@@ -60,7 +60,7 @@ clusterN <- min(nRep, clusterN)
 
 #######
 verbose <- T
-logFile <- F
+logFile <- T
 outputDir <-  paste(getwd(), "output/", sep = "/")
 dir.create(outputDir)
 
