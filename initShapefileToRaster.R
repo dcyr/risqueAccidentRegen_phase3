@@ -34,6 +34,34 @@ initVar <- c("DUMMY","ORIGINE","AN_ORIGINE", "TYPE_COUV",
 
 #######################################################################
 #######################################################################
+##### Creating accessibility raster from road shapefile
+#######################################################################
+
+roadShapefile <- "CheminR10_Pastille10km"
+roads <- readOGR(dsn = "../gis", layer = roadShapefile)
+roads <- spTransform(roads, CRSobj = crs(studyArea))
+
+# ### 
+# Le champs « CL_CHEMIN » présente les classes de chemins :
+# 1, 2, 3,4 - ces classes sont carrossable quand le chemin n'est pas trop vieux ou entretenu.
+# 5 - souvent utilisé pour décrire un chemin d'hiver
+# Hi - Chemin d'hiver
+# HN - Hors norme
+# NC - Non classé
+# NF - Non forestier souvent fait par une mine
+# IN - Inconnu
+
+w <- 2000
+roadsPerm <- roads[roads$CL_CHEMIN %in% c("01", "02", "03", "04", "HN"),]
+roadBuffer <- buffer(roadsPerm, width = 2000)
+roadBuffer <- rasterize(roadBuffer, studyArea)
+roadBuffer[is.na(studyArea)] <- NA
+###############
+writeRaster(roadBuffer, file = paste0("roadAccess_", w/1000, "k.tif"), overwrite = T)
+
+
+#######################################################################
+#######################################################################
 ##### Creating rasters from forest inventory shapefiles
 #######################################################################
 #########  quite long... uncomment only if needed
