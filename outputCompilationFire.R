@@ -2,7 +2,7 @@
 ###################################################################################################
 ##### Compiling raw fire outputs to a tidy data frame
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario", "clusterN"))])
+rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario", "clusterN", "fr", "mgmt"))])
 # #######
 # rm(list = ls())
 # setwd("D:/test/risqueAccidentRegen_phase3/100rep_baseline/")
@@ -53,8 +53,8 @@ index <- intersect(index, grep("Fire", x))
 x <- x[index]
 simInfo <- gsub(".RData", "", x)
 simInfo <- strsplit(simInfo, "_")
-#scenario <- as.character(lapply(simInfo, function(x) x[[2]]))
 replicates <- as.numeric(lapply(simInfo, function(x) x[2]))
+rm(simInfo)
 ###########################################
 
 
@@ -74,8 +74,6 @@ outputCompiled <- foreach(i = seq_along(x), .combine = "rbind") %dopar% {#
     require(reshape2)
     require(dplyr)
     
-    ## simInfo
-    s <- scenario
     # s <- scenario[i]
     r <- replicates[i]
     
@@ -98,9 +96,11 @@ outputCompiled <- foreach(i = seq_along(x), .combine = "rbind") %dopar% {#
     #             id.vars = c("year", "replicate"),
     #             value.name = "areaBurnedTotal_ha")
     
-    out <- data.frame(scenario = s, areaBurned)
+    out <- data.frame(scenario = fr,
+                      mgmt = mgmt,
+                      areaBurned)
     
-    print(paste("fire", s, r))
+    print(paste("fire", fr, r))
     return(out)
     
 }
@@ -108,7 +108,7 @@ outputCompiled <- foreach(i = seq_along(x), .combine = "rbind") %dopar% {#
 stopCluster(cl)
 
 outputCompiled <- merge(outputCompiled, fireZoneArea)
-outputCompiled <- arrange(outputCompiled, scenario, replicate, year)
+outputCompiled <- arrange(outputCompiled, scenario, mgmt, replicate, year)
 
 save(outputCompiled, file = paste0("outputCompiledFire_", scenario, ".RData"))
      
