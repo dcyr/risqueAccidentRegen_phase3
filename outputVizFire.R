@@ -2,7 +2,7 @@
 ###################################################################################################
 ##### Visualizing fire simulations
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario", "initYear"))])
+rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario", "clusterN", "fr", "mgmt", "initYear"))])
 # setwd("D:/regenFailureRiskAssessmentData_phase2/2018-10-23")
 # wwd <- paste(getwd(), Sys.Date(), sep = "/")
 # dir.create(wwd)
@@ -25,14 +25,10 @@ require(ggplot2)
 output <- list()
 fireRegime <- list()
 
-simID <- strsplit(scenario, "_")
-fr <- as.character(lapply(simID, function(x) x[[1]]))
-mgmt <- as.character(lapply(simID, function(x) x[[2]]))
-
 for (s in seq_along(scenario)) {
     
     ### fetching outputs
-    output[[scenario[s]]] <- get(load(paste0(paste0("../", "outputCompiled/outputCompiledFire_", mgmt[s], ".RData"))))
+    output[[scenario[s]]] <- get(load(paste0(paste0("../", "outputCompiled/outputCompiledFire_", scenario[s], ".RData"))))
     
     ## fetching fire regimes
     x <- read.csv(paste0("../", scenario[s], "/fireRegime.csv"))

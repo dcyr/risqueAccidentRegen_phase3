@@ -182,7 +182,6 @@ simFire <- function(tsfInit, simDur, yearInit,
             
             
             ## rounding fire sizes to cell resolution
-            fSize[fSize$fireSize<=scaleFactor, "fireSize"] <- scaleFactor ## all fire events must burn at least one cell
             fSize$fireSize <- round(fSize$fireSize/scaleFactor)*scaleFactor
             ## removing fire of size 0
             fSize <- fSize[fSize$fireSize>0,]
