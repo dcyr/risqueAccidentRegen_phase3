@@ -2,7 +2,7 @@
 ###################################################################################################
 ##### Visualizing harvest simulations
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario", "initYear"))])
+rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario", "clusterN", "fr", "mgmt", "initYear"))])
 # setwd("D:/regenFailureRiskAssessmentData_phase2/2018-11-07_coupe0.31_recup70")
 # wwd <- paste(getwd(), Sys.Date(), sep = "/")
 # dir.create(wwd)
@@ -14,26 +14,25 @@ require(raster)
 require(ggplot2)
 require(dplyr)
 require(reshape2)
-initYear <- 2015
 
 harvTarget <- output <- list()
 
-for(s in scenario) {
+for(s in seq_along(scenario)) {
     ####################################################################
     ####################################################################
     ######
-    studyArea <- raster(paste0("../", s, "/studyArea.tif"))
+    studyArea <- raster(paste0("../", scenario[s], "/studyArea.tif"))
     convFactor <- prod(res(studyArea))/10000### to convert to hectares
-    uaf <- raster(paste0("../", s, "/uaf.tif"))
-    uaf_RAT <- read.csv(paste0("../", s, "/uaf_RAT.csv"))
+    uaf <- raster(paste0("../", scenario[s], "/uaf.tif"))
+    uaf_RAT <- read.csv(paste0("../", scenario[s], "/uaf_RAT.csv"))
     
-    subZones <- raster(paste0("../", s, "/subZones.tif"))
-    subZones_RAT <- read.csv(paste0("../", s, "/subZones_RAT.csv"))
+    subZones <- raster(paste0("../", scenario[s], "/subZones.tif"))
+    subZones_RAT <- read.csv(paste0("../", scenario[s], "/subZones_RAT.csv"))
     
-    coverTypes <- raster(paste0("../", s, "/coverTypes.tif"))
-    coverTypes_RAT <- read.csv(paste0("../", s, "/coverTypes_RAT.csv"))
+    coverTypes <- raster(paste0("../", scenario[s], "/coverTypes.tif"))
+    coverTypes_RAT <- read.csv(paste0("../", scenario[s], "/coverTypes_RAT.csv"))
     
-    plan <- get(load(paste0("../", s, "/managementPlan.RData")))[["baseline"]]
+    plan <- get(load(paste0("../", scenario[s], "/managementPlan.RData")))[["baseline"]]
     
     ## eligible to harvest
     harvEligible <- uaf %in% plan$uaf &
@@ -52,24 +51,28 @@ for(s in scenario) {
                          totalEligibleArea_ha = target[,"value"] * convFactor,
                          harvTargetArea_ha =  round(target[,"value"] * targetProp) *25)
     
-    target <- rbind(target, data.frame(id = NA, uaf = "total",
-                                       totalEligibleArea_ha = sum(target$totalEligibleArea_ha),
-                                       harvTargetArea_ha = sum(target$harvTargetArea_ha))) 
     
-    target[,"scenario"] <- s
+    # target <- rbind(target, data.frame(id = NA, uaf = "total",
+    #                                    totalEligibleArea_ha = sum(target$totalEligibleArea_ha),
+    #                                    harvTargetArea_ha = sum(target$harvTargetArea_ha))) 
+    target[,"scenario"] <- fr[s]
+    target[,"mgmt"] <- mgmt[s]
     
-    harvTarget[[s]] <- target
-    ####################################################################
-    ####################################################################
-    ######
+    harvTarget[[scenario[s]]] <- target
+    
     ### fetching compiled results
-    output[[s]] <-  get(load(paste0(paste0("../outputCompiled/outputCompiledHarvest_", s, ".RData"))))
+    output[[scenario[s]]] <-  get(load(paste0(paste0("../outputCompiled/outputCompiledHarvest_", scenario[s], ".RData"))))
     rm(outputCompiled)
-    
+
 }
 
-output <- do.call("rbind", output)
-harvTarget <- do.call("rbind", harvTarget)
+if(length(output)>1) {
+    output <- do.call("rbind", output)
+    harvTarget <- do.call("rbind", harvTarget)
+} else {
+    output <- output[[scenario]]
+    harvTarget <- harvTarget[[scenario[s]]]
+}
 nSims <- length(unique(output$replicate))
 
 ### summarizing results, percentile & such
@@ -80,24 +83,25 @@ targetTotal <- target[target$uaf == "total", "harvTargetArea_ha"]
 
 
 summaryHarvest <- output %>%
-    mutate(harvAreaTotal = areaHarvestedTotal_ha + areaSalvagedTotal_ha,
-           propTarget = harvAreaTotal / harvTargetArea_ha,
-           salvProp = areaSalvagedTotal_ha / harvAreaTotal) 
+    mutate(harvAreaTotal_ha = areaHarvestedTotal_ha + areaSalvagedTotal_ha,
+           harvVolTotal_cubMeter = volHarvestedTotal_cubMeter + volSalvagedTotal_cubMeter,
+           propTarget = harvAreaTotal_ha / harvTargetArea_ha,
+           salvProp = areaSalvagedTotal_ha / harvAreaTotal_ha) 
     
 write.csv(summaryHarvest, paste0("harvestSummary.csv"), row.names = F)
 
 
 summaryHarvest <- summaryHarvest %>%
     group_by(scenario, uaf, year) %>%
-    summarise(p01HarvestProp = quantile(areaHarvestedTotal_ha, .01),
-              p05HarvestProp = quantile(areaHarvestedTotal_ha, .05),
-              p10HarvestProp = quantile(areaHarvestedTotal_ha, .10),
-              p25HarvestProp = quantile(areaHarvestedTotal_ha, .25),
-              p50HarvestProp = quantile(areaHarvestedTotal_ha, .5),
-              p75HarvestProp = quantile(areaHarvestedTotal_ha, .75),
-              p95HarvestProp = quantile(areaHarvestedTotal_ha, .95),
-              p90HarvestProp = quantile(areaHarvestedTotal_ha, .90),
-              p99HarvestProp = quantile(areaHarvestedTotal_ha, .99),
+    summarise(p01HarvestProp = quantile(harvAreaTotal_ha, .01),
+              p05HarvestProp = quantile(harvAreaTotal_ha, .05),
+              p10HarvestProp = quantile(harvAreaTotal_ha, .10),
+              p25HarvestProp = quantile(harvAreaTotal_ha, .25),
+              p50HarvestProp = quantile(harvAreaTotal_ha, .5),
+              p75HarvestProp = quantile(harvAreaTotal_ha, .75),
+              p95HarvestProp = quantile(harvAreaTotal_ha, .95),
+              p90HarvestProp = quantile(harvAreaTotal_ha, .90),
+              p99HarvestProp = quantile(harvAreaTotal_ha, .99),
               p01SalvProp = quantile(salvProp, .01, na.rm = T),
               p05SalvProp = quantile(salvProp, .05, na.rm = T),
               p10alvProp = quantile(salvProp, .10, na.rm = T),
@@ -107,15 +111,15 @@ summaryHarvest <- summaryHarvest %>%
               p90SalvProp = quantile(salvProp, .90, na.rm = T),
               p95SalvProp = quantile(salvProp, .95, na.rm = T),
               p99SalvProp = quantile(salvProp, .99, na.rm = T),
-              p01HarvestVol = quantile(volHarvestedTotal_cubMeter, .01),
-              p05HarvestVol = quantile(volHarvestedTotal_cubMeter, .05),
-              p10HarvestVol = quantile(volHarvestedTotal_cubMeter, .10),
-              p25HarvestVol = quantile(volHarvestedTotal_cubMeter, .25),
-              p50HarvestVol = quantile(volHarvestedTotal_cubMeter, .5),
-              p75HarvestVol = quantile(volHarvestedTotal_cubMeter, .75),
-              p90HarvestVol = quantile(volHarvestedTotal_cubMeter, .90),
-              p95HarvestVol = quantile(volHarvestedTotal_cubMeter, .95),
-              p99HarvestVol = quantile(volHarvestedTotal_cubMeter, .99),
+              p01HarvestVol = quantile(harvVolTotal_cubMeter, .01),
+              p05HarvestVol = quantile(harvVolTotal_cubMeter, .05),
+              p10HarvestVol = quantile(harvVolTotal_cubMeter, .10),
+              p25HarvestVol = quantile(harvVolTotal_cubMeter, .25),
+              p50HarvestVol = quantile(harvVolTotal_cubMeter, .5),
+              p75HarvestVol = quantile(harvVolTotal_cubMeter, .75),
+              p90HarvestVol = quantile(harvVolTotal_cubMeter, .90),
+              p95HarvestVol = quantile(harvVolTotal_cubMeter, .95),
+              p99HarvestVol = quantile(harvVolTotal_cubMeter, .99),
               p01SalvVol = quantile(volSalvagedTotal_cubMeter, .01),
               p05SalvVol = quantile(volSalvagedTotal_cubMeter, .05),
               p10SalvVol = quantile(volSalvagedTotal_cubMeter, .10),
@@ -257,11 +261,12 @@ dev.off()
 ### summarizing results, shortfall probs
 shortfallDF <- output %>%
     #group_by(scenario, year, replicate) %>%
-    mutate(shortfall_tol75 = areaHarvestedTotal_ha < .25*harvTargetArea_ha,
-           shortfall_tol50 = areaHarvestedTotal_ha < .50*harvTargetArea_ha,
-           shortfall_tol25 = areaHarvestedTotal_ha < .75*harvTargetArea_ha,
-           shortfall_tol10 = areaHarvestedTotal_ha < .90*harvTargetArea_ha,
-           shortfall_tol05 = areaHarvestedTotal_ha < .95*harvTargetArea_ha) %>%
+    mutate(harvAreaTotal_ha = areaHarvestedTotal_ha + areaSalvagedTotal_ha,
+           shortfall_tol75 = harvAreaTotal_ha < .25*harvTargetArea_ha,
+           shortfall_tol50 = harvAreaTotal_ha < .50*harvTargetArea_ha,
+           shortfall_tol25 = harvAreaTotal_ha < .75*harvTargetArea_ha,
+           shortfall_tol10 = harvAreaTotal_ha < .90*harvTargetArea_ha,
+           shortfall_tol05 = harvAreaTotal_ha < .95*harvTargetArea_ha) %>%
     group_by(scenario, replicate) %>%
     arrange(year) %>%
     mutate(shortfall_tol75 = cumsum(shortfall_tol75)>=1,
@@ -304,7 +309,7 @@ m <- ggplot(df, aes(x = year + 2015,
     
 
 png(filename= paste0("harvestShortfall.png"),
-    width = 12, height = 6, units = "in", res = 600, pointsize=10)
+    width = 8, height = 6, units = "in", res = 600, pointsize=10)
 options(scipen=999)
 
 print(m + theme_dark() +
