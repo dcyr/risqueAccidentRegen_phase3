@@ -44,6 +44,7 @@ if(!noUAF) {
 subZones <- raster("../data/subZones.tif")
 subZones_RAT <- read.csv("../data/subZones_RAT.csv")
 lakes <- raster("../data/lakes.tif")
+roadAccess <- raster("../data/roadAccess_2k.tif")
 
 # disturbance history
 AN_ORIGINE <- raster("../data/Inv/AN_ORIGINE.tif")
@@ -377,9 +378,10 @@ hli[is.na(coverTypes)] <- prodPot[is.na(coverTypes)] <- preTot[is.na(coverTypes)
 ## study area
 writeRaster(studyArea, file = "studyArea.tif", overwrite = T)
 save(studyAreaP, file = "studyAreaP.RData")
-stored <- append(stored, "studyArea")
+stored <- append(stored, c("studyArea"))
 writeRaster(lat, file = "lat.tif", overwrite = T)
 writeRaster(long, file = "long.tif", overwrite = T)
+
 stored <- append(stored, c("lat", "long"))
 ## zonation
 writeRaster(uaf, file = "uaf.tif", overwrite = T)
@@ -387,7 +389,8 @@ write.csv(uaf_RAT, file = "uaf_RAT.csv", row.names = F)
 stored <- append(stored, c("uaf", "uaf_RAT"))
 writeRaster(subZones, file = "subZones.tif", overwrite = T)
 write.csv(subZones_RAT, file = "subZones_RAT.csv", row.names = F)
-stored <- append(stored, c("subZones", "subZones_RAT"))
+writeRaster(roadAccess, file = "roadAccess.tif", overwrite = T)
+stored <- append(stored, c("subZones", "subZones_RAT", "roadAccess"))
 ## initial conditions (variables)
 writeRaster(tsd, file = "tsd.tif", overwrite = T)
 stored <- append(stored, "tsd")

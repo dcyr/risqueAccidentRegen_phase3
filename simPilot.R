@@ -112,7 +112,36 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   ## eligible to harvest
   harvEligible <- uaf %in% plan$uaf &
     subZones %in% plan$subZone
+  if(plan$limitedAccess["harv"]) {
+    harvEligible <- harvEligible & roadAccess
+  }
   harvEligible[!harvEligible] <- NA
+  if(plan$salvageLog) {
+    ## eligible to salvage
+    if(plan$limitedAccess["salv"]) {
+      salvEligible <- harvEligible & roadAccess
+    } else {
+      salvEligible <- harvEligible
+    }
+  }
+  if(sum(plan$plantation)>=1) {
+    ## eligible to plantation
+    if(plan$limitedAccess["plant"]) {
+      plantEligible <- harvEligible & roadAccess
+    } else {
+      plantEligible <- harvEligible
+    }
+  }
+  if(plan$retentionCut) {
+    ## eligible to retention cutting
+    if(plan$limitedAccess["reten"]) {
+      retenEligible <- harvEligible & roadAccess
+    } else {
+      retenEligible <- harvEligible
+    }
+  }
+  
+  
   
   ## spp eligible (commercial species)
   spEligible <- coverTypes %in% plan$comSppId[["SEPM"]] & harvEligible
@@ -148,7 +177,6 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   
   
   ## initial volume at 120 years old for eligible stands
-  #
   iqs <- IQS_POT[index]
   sp <- coverTypes_RAT[match(coverTypes[index], coverTypes_RAT$ID), "value"]
   a <- tsdInit[index]
@@ -205,18 +233,17 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   if(verbose) {
     print(paste("Simulating annual processes"))  
   }
-  
-  ###########################
-  ###########################
-  
   ## variable stand attributes (stored)
   fire <- harv <- age <- salv <- plant <- rho100 <- reten <- volAt120 <- list()
-  
-  
-  
   fr <- filter(fireRegime, scenario == scen)
   for (y in 1:simDuration) {#simDuration) {### change into foreach, and return 'fire' 'harv' and 'age' as a list, then reformat
     
+    
+    ### create plantation raster (if any)
+    if(sum(plan$plantation)>=1) {
+      p <- studyArea
+      p[] <- NA
+    }
     
     ####################### simulating fire
     if(verbose) {
@@ -282,35 +309,42 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
       g <- v <- Ac
     }
     
-    ####################### Salvage logging
-    if(verbose) {
-      print(paste("Salvage logging"))  
+    ########################### Salvage logging ################################
+    if(plan$salvageLog) {
+      if(verbose) {
+        print(paste("Salvage logging"))  
+      }
+      vIndex <- which(v > plan$salvageEligibility$`SEPM`)
+      
+      salvageIndex <- data.frame(index = index[vIndex], vSalv = v[vIndex])
+      ## identifying those eligible to harvest
+      eligibleToSalvage <- which(values(sum(spEligible, na.rm = T)) >= 1)
+      
+      salvageIndex <- filter(salvageIndex, index %in% eligibleToSalvage)
+      if(plan$limitedAccess["salv"]) {
+        roadAccessIndex <- which(values(roadAccess) ==  1)
+        salvageIndex <-  filter(salvageIndex, index %in% roadAccessIndex)
+      }
+      
+      ## salvaging only the allowed proportion
+      ########################
+      ## determining the number of cells to harvest
+      nCell <- min(nrow(salvageIndex) * plan$salvageTargetStandProp$SEPM,
+                   plan$targetHarvestLevels$SEPM / plan$salvageWoodPropLost$SEPM *
+                     sum(values(spEligible[[u]]), na.rm = T))
+      nCell <- round(nCell)
+      salvageIndex <- salvageIndex[sample(1:nrow(salvageIndex),nCell),]
+      
+      s <- studyArea
+      s[] <- NA
+      s[salvageIndex$index] <- salvageIndex$vSalv
+      # # ## saving salvaged cells for testing purposes
+      # save(s, file = paste0(outputDir, "s_", y, ".RData"))
+      salv[[y]] <- s
     }
-    vIndex <- which(v > plan$salvageEligibility$`SEPM`)
     
-    salvageIndex <- data.frame(index = index[vIndex], vSalv = v[vIndex])
-    ## indentifying those eligible to harvest
-    eligibleToSalvage <- which(values(sum(spEligible, na.rm = T)) >= 1)
     
-    salvageIndex <- filter(salvageIndex, index %in% eligibleToSalvage)
-    
-    ## salvaging only the allowed proportion
-    ########################
-    ## determining the number of cells to harvest
-    nCell <- min(nrow(salvageIndex) * plan$salvageTargetStandProp$SEPM,
-                 plan$targetHarvestLevels$SEPM / plan$salvageWoodPropLost$SEPM *
-                   sum(values(spEligible[[u]]), na.rm = T))
-    nCell <- round(nCell)
-    salvageIndex <- salvageIndex[sample(1:nrow(salvageIndex),nCell),]
-    
-    s <- studyArea
-    s[] <- NA
-    s[salvageIndex$index] <- salvageIndex$vSalv
-    # # ## saving salvaged cells for testing purposes
-    # save(s, file = paste0(outputDir, "s_", y, ".RData"))
-    salv[[y]] <- s
-    
-    ####################### simulating regeneration density
+    ##################### simulating regeneration density ######################
     if(verbose) {
       print(paste("simulating regeneration density"))  
     }
@@ -328,32 +362,25 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     
     
     ## post-salvage plantation (if applicable)
-    if(verbose) {
-      print(paste("simulating post-salvage plantation"))  
-    }
-    if(plan$salvagePlantation) {
+    if(plan$plantation["postSalvage"]) {
+      if(verbose) {
+        print(paste("simulating post-salvage plantation"))  
+      }
       indexSalvPlant <- which(index %in% salvageIndex$index &
                                 seedlingDens < plan$plantationThreshold)
       
       seedlingDens[indexSalvPlant] <-  seedlingDens[indexSalvPlant] + plan$plantationDensity
+      ## storing planted site
+      p[index[indexSalvPlant]] <- 1
     }
     
     ## work with is.na(seedlingDens==F) (covertypes other than EN and PG produce NAs)
     x <- rep(NA, length(seedlingDens))
     indexSeedlings <- !is.na(seedlingDens)
     
-    
     ## converting seedling density to new relative density
     x[indexSeedlings] <- doQmapQUANT(x = seedlingDens[indexSeedlings], fobj = seedlingQMapFit, type = "linear")
     x <- round(x, 3)
-    
-    ## store planted sites (post-salvage)
-    p <- studyArea
-    p[] <- NA
-    p[index[indexSalvPlant]] <- 1
-    
-    plant[[y]] <- p
-    
     
     if(verbose) {
       print(paste("Updating stand attribute in burned cells"))  
