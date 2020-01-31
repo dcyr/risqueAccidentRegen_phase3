@@ -2,13 +2,13 @@
 ################################################################################
 ##### Main script driving the simulation
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-# ## setwd("C:/Users/dcyr-z840/Sync/Travail/ECCC/regenFailureRiskAssessment_phase3")
-rm(list = ls())
-################################################################################
-home <- path.expand("~")
-home <- gsub("\\\\", "/", home) # necessary on some Windows machine
-home <- gsub("/Documents", "", home) # necessary on my Windows machine
-setwd(paste(home, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3/", sep ="/"))
+# # ## setwd("C:/Users/dcyr-z840/Sync/Travail/ECCC/regenFailureRiskAssessment_phase3")
+# rm(list = ls())
+# ################################################################################
+# home <- path.expand("~")
+# home <- gsub("\\\\", "/", home) # necessary on some Windows machine
+# home <- gsub("/Documents", "", home) # necessary on my Windows machine
+# setwd(paste(home, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3/", sep ="/"))
 # setwd("D:/test/risqueAccidentRegen_phase3/")
 ################################################################################
 ################################################################################
@@ -54,13 +54,13 @@ IDR100Init <- IDR100
 ### actual simulation
 require(doSNOW)
 require(parallel)
-clusterN <- max(1, floor(0.85*detectCores())) ### choose number of nodes to add to cluster.
+clusterN <- 50#max(1, floor(0.85*detectCores())) ### choose number of nodes to add to cluster.
 
 clusterN <- min(nRep, clusterN)
 
 #######
 verbose <- T
-logFile <- T
+logFile <- F
 outputDir <-  paste(getwd(), "output/", sep = "/")
 dir.create(outputDir)
 
