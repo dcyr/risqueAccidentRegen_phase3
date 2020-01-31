@@ -37,13 +37,13 @@ retentionCut <- T
 retentionCutTarget <- 30 ## targeted min volAt120 years old
 
 ## plantation
-plantation <- c(postFire = F,
-               postHarvest = F,
-               postSalvage = T,
+plantation <- c(postFire = T,
+               postHarv = F,
+               postSalv = T,
                postReten = F)
 plantationSp <- c(postFire = "same",## ('"same", or any of the other covertype)
-                  postHarvest = "same",
-                  postSalvage = "same",
+                  postHarv = "same",
+                  postSalv = "same",
                   postReten = "same")
 plantationThreshold <- 0.2 ## seedling density under which plantation is prescribed
 plantationDensity <- 0.2 ## planted seedling density (per sq meter, is added to natural regeneration) 

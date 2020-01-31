@@ -53,7 +53,7 @@ for(sp in c("EN", "PG")) {
 }
 
 
-seedlingFnc <- function(sp, Ac, G, iqs, seedCoef, tCoef) {
+seedlingFnc <- function(sp, Ac, G, iqs, seedCoef, tCoef, salvaged = F) {
     
     .sp <- as.character(sp)
     .G <- G
@@ -61,7 +61,9 @@ seedlingFnc <- function(sp, Ac, G, iqs, seedCoef, tCoef) {
     .Ac <- Ac
     .iqs <- iqs
     .tCoef <- tCoef
-    
+    if(length(salvaged) == 1) {
+        salvaged <- rep(salvaged, length(.sp))
+    }
     
     
     a <- as.numeric(lapply(.seedCoef, function(x) x["a"]))
@@ -75,6 +77,7 @@ seedlingFnc <- function(sp, Ac, G, iqs, seedCoef, tCoef) {
     fh <- as.numeric(lapply(.seedCoef, function(x) x["fh"]))
     g <- as.numeric(lapply(.seedCoef, function(x) x["g"]))
     td <- as.numeric(lapply(.seedCoef, function(x) x["td"]))
+   
     
     # seed production / m2
     
@@ -90,9 +93,9 @@ seedlingFnc <- function(sp, Ac, G, iqs, seedCoef, tCoef) {
                      fh = fh[match(.sp, names(.seedCoef))],
                      g = g[match(.sp, names(.seedCoef))],
                      td = td[match(.sp, names(.seedCoef))])
-    
-   
-    
+
+    ##
+    df[salvaged, "td"] <- ifelse(.sp[salvaged] == "EN", 0.40, 0.81)
     
     ### seed production (number of seeds per sq-meter; Greene and Johnson 1998)
     df[,"seedsPerSqM"] <- apply(df, 1, function(x) x["a"]*x["b"]*(x["ba"]^x["c"])*x["td"])
@@ -109,6 +112,8 @@ seedlingFnc <- function(sp, Ac, G, iqs, seedCoef, tCoef) {
    
     ### correction for the proportion of trees bearing cones depending of stand age
     x <- x * propConesFnc(sp = .sp, iqs = .iqs, Ac = .Ac, tCoef = .tCoef)
+    ### assuming 30% mortality in salvaged sites because of machinery
+    x[salvaged] <- x[salvaged] * .70
     ### when G == 0
     x[which(df$ba == 0)] <- 0
     

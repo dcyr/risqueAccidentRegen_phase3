@@ -19,7 +19,7 @@ setwd(wwd)
 ################################################################################
 ################################################################################
 nRep <- 100
-simDuration <- 150
+simDuration <- 100
 simStartYear <- 2015
 scen <- "baseline" #c("baseline", "RCP85")
 noUAF <- T 
@@ -60,7 +60,7 @@ clusterN <- min(nRep, clusterN)
 
 #######
 verbose <- T
-logFile <- F
+logFile <- T
 outputDir <-  paste(getwd(), "output/", sep = "/")
 dir.create(outputDir)
 
@@ -108,6 +108,8 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   
   ### preparing management plan inputs
   plan <- managementPlan[[harvestScenario]]
+  ### fire regime
+  fr <- filter(fireRegime, scenario == scen)
   
   ## eligible to harvest
   harvEligible <- uaf %in% plan$uaf &
@@ -228,24 +230,55 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   names(uR) <- names(spEligible) <- names(matThresh) <- plan$uaf
   
   
-  ###########################
-  ###########################
+  ##############################################################################
+  ##############################################################################
   if(verbose) {
     print(paste("Simulating annual processes"))  
   }
+  ###############################################################################
   ## variable stand attributes (stored)
-  fire <- harv <- age <- salv <- plant <- rho100 <- reten <- volAt120 <- list()
-  fr <- filter(fireRegime, scenario == scen)
-  for (y in 1:simDuration) {#simDuration) {### change into foreach, and return 'fire' 'harv' and 'age' as a list, then reformat
+  fire <- age <- rho100 <- volAt120 <- list()
+  
+  ### creating list for optional outputs
+  harv <- list()
+  if(plan$salvageLog) {
+    salv <- list()
+  }
+  if(plan$retentionCut) {
+    reten <- list()
+  }
+  if(sum(plan$plantation)>=1) {
+    plant <- list()
+    kNames <- names(plan$plantation)
+    for (k in seq_along(kNames)) {
+      if(plan$plantation[k])  {
+        plant[[kNames[k]]] <- list()
+      }
+    }
+  }
+
+  for (y in 1:simDuration) {
     
-    
-    ### create plantation raster (if any)
-    if(sum(plan$plantation)>=1) {
-      p <- studyArea
-      p[] <- NA
+    ####################### create rasters #####################################
+    harv[[y]] <- coverTypes
+    harv[[y]][] <- NA
+    if(exists("salv")) {
+      salv[[y]] <- coverTypes
+      salv[[y]][] <- NA
+    }
+    if(exists("reten")) {
+      reten[[y]] <- coverTypes
+      reten[[y]][] <- NA
+    }
+    if(exists("plant")) {
+      for (k in which(plan$plantation == T)) {
+          plant[[kNames[k]]][[y]] <- coverTypes
+          plant[[kNames[k]]][[y]][] <- NA
+      }
     }
     
-    ####################### simulating fire
+    
+    ####################### simulating fire #################################### 
     if(verbose) {
       print(paste("Simulating fire"))  
     }
@@ -267,13 +300,15 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     # # ##saving f for testing purposes
     # save(f, file = paste0(outputDir, "fire_", y, ".RData"))
     
-    ####################### computing pre-fire stand attributes 
+    
+    ################## computing pre-fire stand attributes  ####################
     if(verbose) {
       print(paste("computing pre-fire stand attributes"))  
     }
     # print("computing pre-fire stand attributes")
     ### focussing on burned cells 
-    index <- which(values(f & studyArea & coverTypes %in% plan$comSppId[["SEPM"]]))
+    index <- which(values(f & studyArea &
+                            coverTypes %in% plan$comSppId[["SEPM"]]))
     ###
     iqs <- iqs_extract()
     a <- age_extract()
@@ -302,7 +337,8 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
                      merchantable)
       ## merchantable volume 
       v <- VFnc(sp = sp, Ac = Ac, iqs = iqs, rho100 = r100,
-                rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef, DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
+                rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef,
+                DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
                 scenesCoef = NULL, withSenescence = F)
       v[g == 0] <- 0
     } else {
@@ -318,14 +354,8 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
       
       salvageIndex <- data.frame(index = index[vIndex], vSalv = v[vIndex])
       ## identifying those eligible to harvest
-      eligibleToSalvage <- which(values(sum(spEligible, na.rm = T)) >= 1)
-      
-      salvageIndex <- filter(salvageIndex, index %in% eligibleToSalvage)
-      if(plan$limitedAccess["salv"]) {
-        roadAccessIndex <- which(values(roadAccess) ==  1)
-        salvageIndex <-  filter(salvageIndex, index %in% roadAccessIndex)
-      }
-      
+      salvageIndex <- filter(salvageIndex, index %in% which(values(salvEligible)))
+
       ## salvaging only the allowed proportion
       ########################
       ## determining the number of cells to harvest
@@ -341,6 +371,9 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
       # # ## saving salvaged cells for testing purposes
       # save(s, file = paste0(outputDir, "s_", y, ".RData"))
       salv[[y]] <- s
+      if(verbose) {
+        print(paste(nrow(salvageIndex), "cell(s) salvaged"))
+      }
     }
     
     
@@ -350,6 +383,8 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     }
     ## applying minimum basal area based on what has been set aside in previous harvesting
     retentionIndex <- which(stSetAside[index] > 0)
+    salvaged <- index %in% salvageIndex$index
+    
     g <- apply(data.frame(g, stSetAside[index]), 1, function(x) max(x, na.rm = T))
     
     ## consider stand with retention harvesting fully mature
@@ -358,22 +393,48 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     
     ## natural regen seedling density
     seedlingDens <- seedlingFnc(sp = sp, Ac = AcEffective, G = g, iqs = iqs,
-                                seedCoef = seedCoef, tCoef = tCoef)
-    
-    
-    ## post-salvage plantation (if applicable)
-    if(plan$plantation["postSalvage"]) {
-      if(verbose) {
-        print(paste("simulating post-salvage plantation"))  
+                                seedCoef = seedCoef, tCoef = tCoef,
+                                salvaged = salvaged)
+    ###################### post-salvage plantation (if applicable) #############
+    if(plan$salvageLog) {
+      if(plan$plantation["postSalv"]) {
+        if(verbose) {
+          print(paste("simulating post-salvage plantation"))
+        }
+        indexSalvPlant <- which(index %in% salvageIndex$index &
+                                  seedlingDens < plan$plantationThreshold &
+                                  index %in%  which(values(plantEligible)))
+        
+        seedlingDens[indexSalvPlant] <-  seedlingDens[indexSalvPlant] + plan$plantationDensity
+        ## storing planted site
+        plant[["postSalv"]][[y]][index[indexSalvPlant]] <- 1
+        if(verbose) {
+          print(paste(length(indexSalvPlant), "cell(s) planted (post-salvage)"))
+        }
       }
-      indexSalvPlant <- which(index %in% salvageIndex$index &
-                                seedlingDens < plan$plantationThreshold)
-      
-      seedlingDens[indexSalvPlant] <-  seedlingDens[indexSalvPlant] + plan$plantationDensity
-      ## storing planted site
-      p[index[indexSalvPlant]] <- 1
     }
     
+    ###################### post-fire plantation (if applicable) #############
+    if(plan$plantation["postFire"]) {
+      if(verbose) {
+        print(paste("simulating post-fire plantation"))
+      }
+      indexFirePlant <- which(seedlingDens < plan$plantationThreshold &
+                                index %in%  which(values(plantEligible)))
+      
+      seedlingDens[indexFirePlant] <-  seedlingDens[indexFirePlant] + plan$plantationDensity
+      ## storing planted site
+      plant[["postFire"]][[y]][index[indexFirePlant]] <- 1
+      if(verbose) {
+        print(paste(length(indexFirePlant), "cell(s) planted (post-fire)"))
+      }
+    }
+  
+  
+    
+    
+    
+    ########################## updating IDR100 #################################
     ## work with is.na(seedlingDens==F) (covertypes other than EN and PG produce NAs)
     x <- rep(NA, length(seedlingDens))
     indexSeedlings <- !is.na(seedlingDens)
@@ -408,35 +469,35 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     ### creating new raster layer
     volAt120[[y]] <- v120
     
-    # cbind(v120[[y]][index], v120)
-    ####################### updating tsd (do after updating density)
+    
+    ################### updating tsd (do after updating density) ###############
     tsd[f] <- 0
-    #######################  resetting burned stands to 0 basal area
+    ##################  resetting burned stands to 0 basal area ################
     stSetAside[index] <- 0
     
     
-    ####################### removing stand attributes and others
+    ##################### removing stand attributes and others #################
     suppressWarnings(
       rm(f, v120, index, iqs, a, sp, r100, Ac, Hd, v, foo)
     )
     
-    ########################################################################
-    ####################### simulating harvest
-    ########################################################################
+    ############################################################################
+    ####################### simulating harvest #################################
+    ############################################################################
     if(verbose) {
-      print(paste0("simulating harvests ; sim ", simID, " ; year ", y))  
+      print(paste0("simulating harvests ; sim ", simID, " ; year ", y))
+      if(plan$retentionCut) {
+        print("(retention cut)")
+      } else {
+        print("(clearcutting)")
+      }
     }
-    
-    
-
     
     ##### eligible to harvest at a given timestep
     eligible <- tsd > matThresh &
       volAt120[[y]] >= volMinAt120
-    ##dens %in% dens_RAT[which(dens_RAT$value %in% densProd), "ID"]  ## 
     
     x <- numeric() ## vector of cells to be harvested
-    
     for (u in plan$uaf) { ### identifying stands to harvest
       ## checking for age structure conditions within uaf
       old <- tsd>=plan$oldMinAge & !is.na(coverTypes) & spEligible[[u]]
@@ -458,9 +519,9 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
          salvPropVolEquiv < plan$targetHarvestLevels[["SEPM"]]) {
         
         ## determining the number of cells to harvest
-        p <- min(plan$targetHarvestLevels[["SEPM"]] - salvPropVolEquiv,
+        prop <- min(plan$targetHarvestLevels[["SEPM"]] - salvPropVolEquiv,
                  marginOld, marginRegen)
-        nCell <- round(p * sum(values(spEligible[[u]]), na.rm = T))
+        nCell <- round(prop * sum(values(spEligible[[u]]), na.rm = T))
         ## eligible cells
         index <- which(values(eligible[[u]]))
         ## sampling cells
@@ -476,8 +537,7 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
       }
     }
     
-    reten[[y]] <- harv[[y]] <- coverTypes 
-    reten[[y]][] <- harv[[y]][] <- NA
+
     ################ stand attributes, focussing on harvested stands
     if(verbose) {
       print("Computing stand attribute in harvested cells")
@@ -516,7 +576,6 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
       v <- VFnc(sp = sp, Ac = Ac, iqs = iqs, rho100 = r100,
                 rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef, DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
                 scenesCoef = NULL, withSenescence = F)
-      
       
       if(plan$retentionCut) {
         if(verbose) {
@@ -572,6 +631,11 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
         harv[[y]][x] <-  v
       }
       
+      
+      
+      
+      
+      
       ####################### updating tsd
       tsd[x] <- 0
       
@@ -607,11 +671,6 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     print("stacking rasters")
   }
   
-  
-  ### stack consider possible missing layers
-  
-  
-  
   ###########################  
   ### mandatory stacks... should be one layer every year
   fire <- stack(fire)
@@ -625,20 +684,36 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   
   
   ### optional stacks, can be missing layers
-  stackFnc <- function(n) { ## where n is a string; the name of the list to stack
-    x <- get(n)
+  stackFnc <- function(n, stackName = NULL) { ## where n is a string; the name of the list to stack, or a list
+    
+    if(class(n) == "character") {
+      x <- get(n)  
+    } else {
+      x <- n
+    }
     
     index <- which(!as.logical(lapply(x, is.null))) ## identify non-null layers
     assign("x", stack(x[index]))
-    
-    names(x) <- paste(n, index, sep = "_")
+    if(class(n) == "character") {
+      names(x) <- paste(n, index, sep = "_")
+    } else {
+      names(x) <- paste(stackName, index, sep = "_")
+    }
     return(x)
   }
   
   
-  for (n in c("harv", "salv", "plant", "reten")) {
-    if(exists(n)) {x
+  for (n in c("harv", "salv",  "reten")) {
+    if(exists(n)) {
       assign(n, stackFnc(n))
+    }
+  }
+  
+  if(exists("plant")) {
+    for(n in names(plant)) {
+      stackName <- n
+      n <- plant[[n]]
+      plant[[stackName]] <- stackFnc(n, stackName)
     }
   }
   
