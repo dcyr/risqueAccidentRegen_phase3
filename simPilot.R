@@ -504,7 +504,7 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     for (u in plan$uaf) { ### identifying stands to harvest
       ## checking for age structure conditions within uaf
       old <- tsd>=plan$oldMinAge & !is.na(ct) & spEligible[[u]]
-      regen <- tsd<plan$regenMaxAge & !is.na() & spEligible[[u]]
+      regen <- tsd<plan$regenMaxAge & !is.na(ct) & spEligible[[u]]
       
       ## computing proportions of old and regen
       propOld <- sum(values(old), na.rm = T) / sum(values(spEligible[[u]]), na.rm = T)
