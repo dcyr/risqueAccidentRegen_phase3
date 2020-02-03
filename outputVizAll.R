@@ -11,7 +11,7 @@ home <- gsub("/Documents", "", home) # necessary on my Windows machine
 setwd("D:/test/risqueAccidentRegen_phase3")
 
 ####################################################################################################
-scenario <- c("baseline_newFireImpl")#"baseline"
+scenario <- c("baseline_newPlantationRules")#"baseline"
 ####################################################################################################
 sourceDir <- path.expand("~")
 sourceDir <- gsub("\\\\", "/", sourceDir) # necessary on some Windows machine

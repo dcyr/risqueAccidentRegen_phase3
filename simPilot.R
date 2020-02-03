@@ -2,13 +2,13 @@
 ################################################################################
 ##### Main script driving the simulation
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-# ## setwd("C:/Users/dcyr-z840/Sync/Travail/ECCC/regenFailureRiskAssessment_phase3")
-# rm(list = ls())
-# ################################################################################
-# home <- path.expand("~")
-# home <- gsub("\\\\", "/", home) # necessary on some Windows machine
-# home <- gsub("/Documents", "", home) # necessary on my Windows machine
-# setwd(paste(home, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3/", sep ="/"))
+## setwd("C:/Users/dcyr-z840/Sync/Travail/ECCC/regenFailureRiskAssessment_phase3")
+rm(list = ls())
+################################################################################
+home <- path.expand("~")
+home <- gsub("\\\\", "/", home) # necessary on some Windows machine
+home <- gsub("/Documents", "", home) # necessary on my Windows machine
+setwd(paste(home, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3/", sep ="/"))
 # setwd("D:/test/risqueAccidentRegen_phase3/")
 ################################################################################
 ################################################################################
