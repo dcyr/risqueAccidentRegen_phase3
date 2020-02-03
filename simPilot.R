@@ -60,7 +60,7 @@ clusterN <- min(nRep, clusterN)
 
 #######
 verbose <- T
-logFile <- T
+logFile <- F
 outputDir <-  paste(getwd(), "output/", sep = "/")
 dir.create(outputDir)
 
@@ -186,7 +186,7 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   Ac <- a - t1[index] 
   r100 <- IDR100[index]
   ##
-  volAt120Init <- volInit <- coverTypes
+  volAt120Init <- volInit <- coverTypesInit <-coverTypes
   volAt120Init[] <- volInit[] <- NA
   volAt120Init[index] <- VFnc(sp = sp, Ac = ageRefCorr, iqs = iqs, rho100 = r100,
                           rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef, DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
@@ -203,7 +203,7 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   
   writeRaster(volAt120Init, file = paste0(outputDir, "volAt120Init_",simID, ".tif"), overwrite = T)
   writeRaster(volInit, file = paste0(outputDir, "volInit_",simID, ".tif"), overwrite = T)
-  
+  writeRaster(coverTypesInit, file = paste0(outputDir, "coverTypesInit_",simID, ".tif"), overwrite = T)
   rm(iqs, sp, a, Ac, r100, volInit, index)
   
   ## creating raster stacks by UAFs
@@ -237,8 +237,8 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   }
   ###############################################################################
   ## variable stand attributes (stored)
-  fire <- age <- rho100 <- volAt120 <- list()
-  
+  fire <- age <- rho100 <- volAt120 <- coverTypes <- list()
+  ct <- coverTypesInit
   ### creating list for optional outputs
   harv <- list()
   if(plan$salvageLog) {
@@ -258,21 +258,20 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   }
 
   for (y in 1:simDuration) {
-    
     ####################### create rasters #####################################
-    harv[[y]] <- coverTypes
+    harv[[y]] <- ct
     harv[[y]][] <- NA
     if(exists("salv")) {
-      salv[[y]] <- coverTypes
+      salv[[y]] <- ct
       salv[[y]][] <- NA
     }
     if(exists("reten")) {
-      reten[[y]] <- coverTypes
+      reten[[y]] <- ct
       reten[[y]][] <- NA
     }
     if(exists("plant")) {
       for (k in which(plan$plantation == T)) {
-          plant[[kNames[k]]][[y]] <- coverTypes
+          plant[[kNames[k]]][[y]] <- ct
           plant[[kNames[k]]][[y]][] <- NA
       }
     }
@@ -308,11 +307,11 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     # print("computing pre-fire stand attributes")
     ### focussing on burned cells 
     index <- which(values(f & studyArea &
-                            coverTypes %in% plan$comSppId[["SEPM"]]))
+                            ct %in% plan$comSppId[["SEPM"]]))
     ###
     iqs <- iqs_extract()
     a <- age_extract()
-    sp <- sp_extract()
+    sp <- sp_extract(r = ct)
     r100 <- IDR100_extract()
     ## age at 1m
     Ac <- ac_extract(a = a,
@@ -408,6 +407,10 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
         seedlingDens[indexSalvPlant] <-  seedlingDens[indexSalvPlant] + plan$plantationDensity
         ## storing planted site
         plant[["postSalv"]][[y]][index[indexSalvPlant]] <- 1
+        if(plan$plantationSp[["postSalv"]] != "same") {
+          ct_sp <- coverTypes_RAT[match(plan$plantationSp[["postSalv"]], coverTypes_RAT[,"value"]), "ID"]
+          ct[indexSalvPlant] <- ct_sp
+        }
         if(verbose) {
           print(paste(length(indexSalvPlant), "cell(s) planted (post-salvage)"))
         }
@@ -425,15 +428,15 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
       seedlingDens[indexFirePlant] <-  seedlingDens[indexFirePlant] + plan$plantationDensity
       ## storing planted site
       plant[["postFire"]][[y]][index[indexFirePlant]] <- 1
+      if(plan$plantationSp[["postFire"]] != "same") {
+        ct_sp <- coverTypes_RAT[match(plan$plantationSp[["postFire"]], coverTypes_RAT[,"value"]), "ID"]
+        ct[indexFirePlant] <- ct_sp
+      }
       if(verbose) {
         print(paste(length(indexFirePlant), "cell(s) planted (post-fire)"))
       }
     }
   
-  
-    
-    
-    
     ########################## updating IDR100 #################################
     ## work with is.na(seedlingDens==F) (covertypes other than EN and PG produce NAs)
     x <- rep(NA, length(seedlingDens))
@@ -468,7 +471,7 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
 
     ### creating new raster layer
     volAt120[[y]] <- v120
-    
+    coverTypes[[y]] <- ct
     
     ################### updating tsd (do after updating density) ###############
     tsd[f] <- 0
@@ -500,8 +503,8 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     x <- numeric() ## vector of cells to be harvested
     for (u in plan$uaf) { ### identifying stands to harvest
       ## checking for age structure conditions within uaf
-      old <- tsd>=plan$oldMinAge & !is.na(coverTypes) & spEligible[[u]]
-      regen <- tsd<plan$regenMaxAge & !is.na(coverTypes) & spEligible[[u]]
+      old <- tsd>=plan$oldMinAge & !is.na(ct) & spEligible[[u]]
+      regen <- tsd<plan$regenMaxAge & !is.na() & spEligible[[u]]
       
       ## computing proportions of old and regen
       propOld <- sum(values(old), na.rm = T) / sum(values(spEligible[[u]]), na.rm = T)
@@ -545,7 +548,8 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     
     iqs <- iqs_extract(stands = x)
     a <- age_extract(stands = x)
-    sp <- sp_extract(stands = x)
+    sp <- sp_extract(r = ct,
+                     stands = x)
     # t1 <- round(tFnc(sp, iqs, tCoef))
     r100 <- IDR100_extract(stands = x)
     ## age at 1m
@@ -681,7 +685,8 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   names(rho100) <- paste0("rho100_", 1:nlayers(rho100))
   volAt120 <- stack(volAt120)
   names(volAt120) <- paste0("volAt120_", 1:nlayers(volAt120))
-  
+  coverTypes <- stack(coverTypes)
+  names(coverTypes) <- paste0("coverTypes_", 1:nlayers(coverTypes))
   
   ### optional stacks, can be missing layers
   stackFnc <- function(n, stackName = NULL) { ## where n is a string; the name of the list to stack, or a list
@@ -722,6 +727,9 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   } 
   print("saving outputFire_*.RData")
   save(fire, file = paste0(outputDir, "outputFire_", simID, ".RData"))
+  
+  print("saving outputCoverTypes_*.RData")
+  save(coverTypes, file = paste0(outputDir, "outputCoverTypes_", simID, ".RData"))
   
   print("saving outputTSD_*.RData")
   save(age, file = paste0(outputDir, "outputTSD_", simID, ".RData"))

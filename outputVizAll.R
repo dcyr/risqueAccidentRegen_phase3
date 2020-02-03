@@ -14,7 +14,6 @@ fr <- as.character(lapply(simInfo, function(x) x[[1]]))
 mgmt <- as.character(lapply(simInfo, function(x) x[[2]]))
 rm(simInfo)
 
-
 ####################################################################################################
 sourceDir <- path.expand("~")
 sourceDir <- gsub("\\\\", "/", sourceDir) # necessary on some Windows machine

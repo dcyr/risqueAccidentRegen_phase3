@@ -41,10 +41,10 @@ plantation <- c(postFire = T,
                postHarv = F,
                postSalv = T,
                postReten = F)
-plantationSp <- c(postFire = "same",## ('"same", or any of the other covertype)
-                  postHarv = "same",
-                  postSalv = "same",
-                  postReten = "same")
+plantationSp <- c(postFire = "PG",## ('"same", or any of the other covertype)
+                  postHarv = "PG",
+                  postSalv = "PG",
+                  postReten = "PG")
 plantationThreshold <- 0.2 ## seedling density under which plantation is prescribed
 plantationDensity <- 0.2 ## planted seedling density (per sq meter, is added to natural regeneration) 
 ## stand selection method (either 'random' or 'older first')
