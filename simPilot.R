@@ -19,7 +19,7 @@ setwd(wwd)
 ################################################################################
 ################################################################################
 nRep <- 100
-simDuration <- 50
+simDuration <- 100
 simStartYear <- 2015
 scen <- "baseline" #c("baseline", "RCP85")
 noUAF <- T 
@@ -60,7 +60,7 @@ clusterN <- min(nRep, clusterN)
 
 #######
 verbose <- T
-logFile <- F
+logFile <- T
 outputDir <-  paste(getwd(), "output/", sep = "/")
 dir.create(outputDir)
 
