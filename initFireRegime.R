@@ -5,8 +5,10 @@
 ### logNormal fit for fire size distribution
 
 fireObs <- read.csv("../data/fireObs.csv", header=TRUE)
-thresh <- 0##prod(res(studyArea))/10000
-df <- fireObs[fireObs$areaTotal_ha>thresh,]
+thresh <- c(0, 200000) ##prod(res(studyArea))/10000
+df <- fireObs %>%
+    filter(areaTotal_ha>thresh[1],
+           areaTotal_ha<thresh[2])
 
 fireSizeDist <- round(df$areaTotal_ha)
 fireSizeMean <- round(mean(fireSizeDist))

@@ -102,7 +102,7 @@ for(s in seq_along(scenario)) {
                           mgmt = mgmt,
                           areaBurned)
         
-        print(paste("fire", fr, r))
+        print(paste("fire", fr[s], r))
         return(out)
         
     }
