@@ -2,7 +2,7 @@
 ################################################################################
 ##### Main script driving the simulation
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-# ## setwd("C:/Users/dcyr-z840/Sync/Travail/ECCC/regenFailureRiskAssessment_phase3")
+## setwd("C:/Users/dcyr-z840/Sync/Travail/ECCC/regenFailureRiskAssessment_phase3")
 # rm(list = ls())
 # ################################################################################
 # home <- path.expand("~")
@@ -19,7 +19,7 @@ setwd(wwd)
 ################################################################################
 ################################################################################
 nRep <- 100
-simDuration <- 100
+simDuration <- 50
 simStartYear <- 2015
 scen <- "baseline" #c("baseline", "RCP85")
 noUAF <- T 
@@ -54,7 +54,7 @@ IDR100Init <- IDR100
 ### actual simulation
 require(doSNOW)
 require(parallel)
-clusterN <- max(1, floor(0.85*detectCores())) ### choose number of nodes to add to cluster.
+clusterN <- 50# max(1, floor(0.85*detectCores())) ### choose number of nodes to add to cluster.
 
 clusterN <- min(nRep, clusterN)
 

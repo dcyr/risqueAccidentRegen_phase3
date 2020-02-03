@@ -2,17 +2,11 @@
 ###################################################################################################
 ##### Visualizing outputs
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-rm(list = ls())
-################################################################################
-home <- path.expand("~")
-home <- gsub("\\\\", "/", home) # necessary on some Windows machine
-home <- gsub("/Documents", "", home) # necessary on my Windows machine
 # setwd(paste(home, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3/", sep ="/"))
 setwd("D:/test/risqueAccidentRegen_phase3")
 
 ####################################################################################################
-<<<<<<< HEAD
-scenario <- c("baseline_noAUF-noTarget-test")##c("baseline", "RCP85")# 
+scenario <- c("baseline_newPlantationRules", "baseline_newFireImpl")##c("baseline", "RCP85")# 
 initYear <- 2015
 
 simInfo <- strsplit(scenario, "_")
@@ -21,9 +15,6 @@ mgmt <- as.character(lapply(simInfo, function(x) x[[2]]))
 rm(simInfo)
 
 
-=======
-scenario <- c("baseline_newFireImpl")#"baseline"
->>>>>>> e841115c18f867efe8736c1cf5db618e955ada48
 ####################################################################################################
 sourceDir <- path.expand("~")
 sourceDir <- gsub("\\\\", "/", sourceDir) # necessary on some Windows machine
@@ -34,14 +25,6 @@ sourceDir <- paste(sourceDir, "Sync/Travail/ECCC/regenFailureRiskAssessment_phas
 wwd <- paste(getwd(), Sys.Date(), sep = "/")
 dir.create(wwd)
 setwd(wwd)
-
-simInfo <- strsplit(scenario, "_")
-fr <- as.character(lapply(simInfo, function(x) x[[1]]))
-mgmt <- as.character(lapply(simInfo, function(x) x[[2]]))
-rm(simInfo)
-
-initYear <- 2015
-
 
 
 ####################################################################################################

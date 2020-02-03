@@ -92,7 +92,7 @@ write.csv(summaryHarvest, paste0("harvestSummary.csv"), row.names = F)
 
 
 summaryHarvest <- summaryHarvest %>%
-    group_by(scenario, uaf, year) %>%
+    group_by(scenario, mgmt, uaf, year) %>%
     summarise(p01HarvestProp = quantile(harvAreaTotal_ha, .01),
               p05HarvestProp = quantile(harvAreaTotal_ha, .05),
               p10HarvestProp = quantile(harvAreaTotal_ha, .10),
@@ -141,10 +141,13 @@ df <- summaryHarvest
 
 cols <- c(baseline = "orange",
           RCP85 = "darkred")
+cols <- c(newFireImpl = "orange",
+          newPlantationRules = "darkred")
+
 
 m <- ggplot(df, aes(x = year + 2015,
-                    colour = scenario,
-                    fill = scenario)) +
+                    colour = mgmt,
+                    fill = mgmt)) +
     #facet_grid(coverType ~ scenario) +
     geom_line(aes(y =100 * p50HarvestProp/target),
               size = 1) +
@@ -211,8 +214,8 @@ dev.off()
 # df <- filter(df, prob %in% c("25%", "50%", "75%"))
 
 m <- ggplot(df, aes(x = year + 2015,
-                    colour = scenario,
-                    fill = scenario)) +
+                    colour = mgmt,
+                    fill = mgmt)) +
     #facet_grid(coverType ~ scenario) +
     geom_line(aes(y =100 * p50SalvProp),
               size = 1) +
@@ -267,7 +270,7 @@ shortfallDF <- output %>%
            shortfall_tol25 = harvAreaTotal_ha < .75*harvTargetArea_ha,
            shortfall_tol10 = harvAreaTotal_ha < .90*harvTargetArea_ha,
            shortfall_tol05 = harvAreaTotal_ha < .95*harvTargetArea_ha) %>%
-    group_by(scenario, replicate) %>%
+    group_by(scenario, mgmt, replicate) %>%
     arrange(year) %>%
     mutate(shortfall_tol75 = cumsum(shortfall_tol75)>=1,
            shortfall_tol50 = cumsum(shortfall_tol50)>=1,
@@ -275,7 +278,7 @@ shortfallDF <- output %>%
            shortfall_tol10 = cumsum(shortfall_tol10)>=1,
            shortfall_tol05 = cumsum(shortfall_tol05)>=1) %>%
     ungroup() %>%
-    group_by(scenario, year) %>%
+    group_by(scenario, mgmt, year) %>%
     summarise(shortfall_tol75 = sum(shortfall_tol75)/n(),
               shortfall_tol50 = sum(shortfall_tol50)/n(),
               shortfall_tol25 = sum(shortfall_tol25)/n(),
@@ -291,7 +294,7 @@ riskTol <- paste0(as.numeric(gsub("[^0-9]","", vars)), "%")
 df <- shortfallDF
 ## reformating in tall form
 require(reshape2)
-df <- melt(shortfallDF, id.vars = c("scenario", "year"),
+df <- melt(shortfallDF, id.vars = c("scenario", "mgmt", "year"),
             measure.vars = vars,
            variable.name = "tolerance")
 
@@ -303,9 +306,10 @@ df$tolerance <- factor(df$tolerance, levels = c("5%", "10%", "25%", "50%", "75%"
 
 m <- ggplot(df, aes(x = year + 2015,
                     y = 100 * value,
-                    linetype = tolerance)) +
+                    linetype = tolerance,
+                    colour = mgmt)) +
     facet_grid(~ scenario) +
-    geom_line(size = 0.5, colour = "lightblue")
+    geom_line(size = 0.5)
     
 
 png(filename= paste0("harvestShortfall.png"),

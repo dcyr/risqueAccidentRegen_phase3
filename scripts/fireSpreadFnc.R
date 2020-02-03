@@ -9,7 +9,7 @@
 
 fireSpread <- function(eligible, w = NULL,
                        fireSize, fireZones,
-                       probSpread =  0.32, maxTry = 3, id) {
+                       probSpread =  0.31, maxTry = 2, id) {
 
     require(raster)
     scaleFactor <- prod(res(eligible) / 100) # convert pixels into hectares

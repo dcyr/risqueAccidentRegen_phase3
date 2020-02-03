@@ -24,9 +24,8 @@ require(ggplot2)
 #############################################################
 output <- list()
 fireRegime <- list()
-
 for (s in seq_along(scenario)) {
-    
+    scen <- scenario[s]
     ### fetching outputs
     output[[scenario[s]]] <- get(load(paste0(paste0("../", "outputCompiled/outputCompiledFire_", scenario[s], ".RData"))))
     
@@ -39,13 +38,15 @@ for (s in seq_along(scenario)) {
     x[, "year"] <- round(as.numeric(lapply(midPoint, function(x) mean(as.numeric(x)))) - initYear)
     x <- x %>% 
         dplyr::select(scenario, fireCycle, year)
+    x[, "mgmt"] <- mgmt[s]
     ### add plateau if necessary
     x <- rbind(x,
                data.frame(year = seq(from = max(x$year),
                                      to = max(output[[s]]$year),
                                      by = 5),
                           fireCycle = x[which.max(x$year), "fireCycle"],
-                          scenario = fr[s]))
+                          scenario = fr[s],
+                          mgmt = mgmt[s]))
     
     x <- distinct(x)
     fireRegime[[scenario[s]]] <- x
@@ -72,12 +73,12 @@ require(dplyr)
 ## create data frame with annual data
 df <- output %>%
     mutate(propAAB = areaBurned_ha/areaZoneTotal_ha) %>%
-    dplyr::select(scenario, replicate, year, areaBurned_ha, areaZoneTotal_ha, propAAB)
+    dplyr::select(scenario, mgmt, replicate, year, areaBurned_ha, areaZoneTotal_ha, propAAB)
 write.csv(df, file = paste0("fireSummary.csv"), row.names = F)
 
 ## global summary
 globalSummary <- df %>%
-    group_by(scenario, replicate) %>%
+    group_by(scenario, mgmt, replicate) %>%
     summarize(fireCycle = round((1/mean(propAAB))),
               propAAB = mean(propAAB)) %>%
     arrange(scenario, replicate)
@@ -92,7 +93,7 @@ f <- function(x, y, span) {
 
 
 annualSummary <- df %>%
-    group_by(scenario, year) %>%
+    group_by(scenario, mgmt, year) %>%
     summarize(propAAB_mean = mean(propAAB),
               propAAB_p10 = quantile(propAAB, 0.05),
               propAAB_p25 = quantile(propAAB, 0.25),
@@ -107,13 +108,13 @@ annualSummary <- df %>%
            p90S = f(x = year, y = propAAB_p90, span = span))
 #### smoooth
 fireRegime <- fireRegime %>%
-    group_by(scenario) %>%
+    group_by(scenario, mgmt) %>%
     mutate(target = f(x = year,
                       y = fireCycle,
                       span = span))
 
 fcSummary <- globalSummary %>%
-    group_by(scenario) %>%
+    group_by(scenario, mgmt) %>%
     summarize(FC_median = median(fireCycle),
               FC_mean = 1/mean(propAAB),
               FP_p10 = quantile(fireCycle, 0.1),
@@ -126,12 +127,14 @@ fcSummary <- globalSummary %>%
 
 ################################################################################
 
-cols <- c(baseline = "orange",
-          RCP85 = "darkred")
+# cols <- c(baseline = "orange",
+#           RCP85 = "darkred")
+cols <- c(newFireImpl = "orange",
+          newPlantationRules = "darkred")
 
-p <- ggplot(annualSummary, aes(x = year + 2015, group = scenario,
-                               fill = scenario,
-                               colour = scenario)) +
+p <- ggplot(annualSummary, aes(x = year + 2015, group = mgmt,
+                               fill = mgmt,
+                               colour = mgmt)) +
     geom_line(aes(y = 100*meanS),
               size = 1) +
     geom_ribbon(aes(y = NULL, colour = NULL,

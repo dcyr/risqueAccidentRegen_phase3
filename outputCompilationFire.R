@@ -20,95 +20,97 @@ require(raster)
 #require(rgeos)
 require(dplyr)
 
-####################################################################
-
-studyArea <- raster(paste0("../", scenario, "/studyArea.tif"))
-fireZones <- raster(paste0("../", scenario, "/fireZones.tif"))
-
-## focusing on fireZones in studyArea
-z <- which(zonal(studyArea, fireZones, sum)[,"value"]>1)
-#fireZones_RAT <- fireZones_RAT[z, ]
-fireZones[is.na(studyArea)] <- NA
-fireZones[!is.na(fireZones)] <- 1
-
-
-##
-convFactor <- prod(res(studyArea))/10000### to convert to hectares
-## in all simulation area
-fireZoneArea <- as.data.frame(zonal(!is.na(fireZones), fireZones, sum))
-fireZoneArea$value <- fireZoneArea$value*convFactor
-colnames(fireZoneArea) <- c("ID", "areaZoneTotal_ha")
-
-
-####################################################################
-####################################################################
-######
-######      compiling simulation outputs
-######
-outputFolder <- paste0("../", scenario, "/output")
-x <- list.files(outputFolder)
-
-index <- grep(".RData", x)
-index <- intersect(index, grep("Fire", x))
-x <- x[index]
-simInfo <- gsub(".RData", "", x)
-simInfo <- strsplit(simInfo, "_")
-replicates <- as.numeric(lapply(simInfo, function(x) x[2]))
-rm(simInfo)
-###########################################
-
-
-###########################################
-
-require(doSNOW)
-require(parallel)
-require(foreach)
-# clusterN <- 2
-# clusterN <-  max(1, floor(0.9*detectCores()))  ### choose number of nodes to add to cluster.
-#######
-cl = makeCluster(clusterN, outfile = "") ##
-registerDoSNOW(cl)
-#######
-outputCompiled <- foreach(i = seq_along(x), .combine = "rbind") %dopar% {# 
-    require(raster)
-    require(reshape2)
-    require(dplyr)
+    ####################################################################
+for(s in seq_along(scenario)) {
+    scen <- scenario[s]
+        
+    studyArea <- raster(paste0("../", scen, "/studyArea.tif"))
+    fireZones <- raster(paste0("../", scen, "/fireZones.tif"))
     
-    # s <- scenario[i]
-    r <- replicates[i]
-    
-    ## fetching outputs
-    fire <- get(load(paste(outputFolder, x[i], sep="/")))
-    ## focusing on studyArea
-    fire[is.na(studyArea)] <- NA
-    
-    ## compiling realized area burned
-    
-    areaBurned <- zonal(fire, fireZones,  "sum")[,-1] * convFactor
-    year <- as.numeric(gsub("[^0-9]", "", names(areaBurned)))
+    ## focusing on fireZones in studyArea
+    z <- which(zonal(studyArea, fireZones, sum)[,"value"]>1)
+    #fireZones_RAT <- fireZones_RAT[z, ]
+    fireZones[is.na(studyArea)] <- NA
+    fireZones[!is.na(fireZones)] <- 1
     
     
-    ## tidying up data frame
-    areaBurned <- data.frame(year, replicate = r,
-                             areaBurned_ha = areaBurned)
+    ##
+    convFactor <- prod(res(studyArea))/10000### to convert to hectares
+    ## in all simulation area
+    fireZoneArea <- as.data.frame(zonal(!is.na(fireZones), fireZones, sum))
+    fireZoneArea$value <- fireZoneArea$value*convFactor
+    colnames(fireZoneArea) <- c("ID", "areaZoneTotal_ha")
     
-    # out <- melt(areaBurned,
-    #             id.vars = c("year", "replicate"),
-    #             value.name = "areaBurnedTotal_ha")
     
-    out <- data.frame(scenario = fr,
-                      mgmt = mgmt,
-                      areaBurned)
+    ####################################################################
+    ####################################################################
+    ######
+    ######      compiling simulation outputs
+    ######
+    outputFolder <- paste0("../", scen, "/output")
+    x <- list.files(outputFolder)
     
-    print(paste("fire", fr, r))
-    return(out)
+    index <- grep(".RData", x)
+    index <- intersect(index, grep("Fire", x))
+    x <- x[index]
+    simInfo <- gsub(".RData", "", x)
+    simInfo <- strsplit(simInfo, "_")
+    replicates <- as.numeric(lapply(simInfo, function(x) x[2]))
+    rm(simInfo)
+    ###########################################
     
-}
-
-stopCluster(cl)
-
-outputCompiled <- merge(outputCompiled, fireZoneArea)
-outputCompiled <- arrange(outputCompiled, scenario, mgmt, replicate, year)
-
-save(outputCompiled, file = paste0("outputCompiledFire_", scenario, ".RData"))
-     
+    
+    ###########################################
+    
+    require(doSNOW)
+    require(parallel)
+    require(foreach)
+    # clusterN <- 2
+    # clusterN <-  max(1, floor(0.9*detectCores()))  ### choose number of nodes to add to cluster.
+    #######
+    cl = makeCluster(clusterN, outfile = "") ##
+    registerDoSNOW(cl)
+    #######
+    outputCompiled <- foreach(i = seq_along(x), .combine = "rbind") %dopar% {# 
+        require(raster)
+        require(reshape2)
+        require(dplyr)
+        
+        # s <- scenario[i]
+        r <- replicates[i]
+        
+        ## fetching outputs
+        fire <- get(load(paste(outputFolder, x[i], sep="/")))
+        ## focusing on studyArea
+        fire[is.na(studyArea)] <- NA
+        
+        ## compiling realized area burned
+        
+        areaBurned <- zonal(fire, fireZones,  "sum")[,-1] * convFactor
+        year <- as.numeric(gsub("[^0-9]", "", names(areaBurned)))
+        
+        
+        ## tidying up data frame
+        areaBurned <- data.frame(year, replicate = r,
+                                 areaBurned_ha = areaBurned)
+        
+        # out <- melt(areaBurned,
+        #             id.vars = c("year", "replicate"),
+        #             value.name = "areaBurnedTotal_ha")
+        
+        out <- data.frame(scenario = fr,
+                          mgmt = mgmt,
+                          areaBurned)
+        
+        print(paste("fire", fr, r))
+        return(out)
+        
+    }
+    
+    stopCluster(cl)
+    
+    outputCompiled <- merge(outputCompiled, fireZoneArea)
+    outputCompiled <- arrange(outputCompiled, scenario, mgmt, replicate, year)
+    
+    save(outputCompiled, file = paste0("outputCompiledFire_", scen, ".RData"))
+}         
