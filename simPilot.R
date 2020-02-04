@@ -54,7 +54,7 @@ IDR100Init <- IDR100
 ### actual simulation
 require(doSNOW)
 require(parallel)
-clusterN <- 50# max(1, floor(0.85*detectCores())) ### choose number of nodes to add to cluster.
+clusterN <-  max(1, floor(0.5*detectCores())) ### choose number of nodes to add to cluster.
 
 clusterN <- min(nRep, clusterN)
 
