@@ -54,13 +54,13 @@ IDR100Init <- IDR100
 ### actual simulation
 require(doSNOW)
 require(parallel)
-clusterN <- 50# max(1, floor(0.85*detectCores())) ### choose number of nodes to add to cluster.
+clusterN <- max(1, floor(0.75*detectCores())) ### choose number of nodes to add to cluster.
 
 clusterN <- min(nRep, clusterN)
 
 #######
 verbose <- T
-logFile <- F
+logFile <- T
 outputDir <-  paste(getwd(), "output/", sep = "/")
 dir.create(outputDir)
 
@@ -186,7 +186,7 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   Ac <- a - t1[index] 
   r100 <- IDR100[index]
   ##
-  volAt120Init <- volInit <- coverTypesInit <-coverTypes
+  volAt120Init <- volInit <- coverTypes
   volAt120Init[] <- volInit[] <- NA
   volAt120Init[index] <- VFnc(sp = sp, Ac = ageRefCorr, iqs = iqs, rho100 = r100,
                           rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef, DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
@@ -203,7 +203,7 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   
   writeRaster(volAt120Init, file = paste0(outputDir, "volAt120Init_",simID, ".tif"), overwrite = T)
   writeRaster(volInit, file = paste0(outputDir, "volInit_",simID, ".tif"), overwrite = T)
-  writeRaster(coverTypesInit, file = paste0(outputDir, "coverTypesInit_",simID, ".tif"), overwrite = T)
+  writeRaster(coverTypes, file = paste0(outputDir, "coverTypesInit_",simID, ".tif"), overwrite = T)
   rm(iqs, sp, a, Ac, r100, volInit, index)
   
   ## creating raster stacks by UAFs
@@ -237,8 +237,8 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   }
   ###############################################################################
   ## variable stand attributes (stored)
-  fire <- age <- rho100 <- volAt120 <- coverTypes <- list()
-  ct <- coverTypesInit
+  fire <- age <- rho100 <- volAt120 <- list()
+  ct <- coverTypes
   ### creating list for optional outputs
   harv <- list()
   if(plan$salvageLog) {
@@ -247,13 +247,16 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   if(plan$retentionCut) {
     reten <- list()
   }
-  if(sum(plan$plantation)>=1) {
+  if(sum(plan$plantation)>0) {
     plant <- list()
     kNames <- names(plan$plantation)
     for (k in seq_along(kNames)) {
       if(plan$plantation[k])  {
         plant[[kNames[k]]] <- list()
       }
+    }
+    if(sum(plan$plantationSp != 'same')>0) {
+      coverTypesDyn <- list()
     }
   }
 
@@ -407,9 +410,10 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
         seedlingDens[indexSalvPlant] <-  seedlingDens[indexSalvPlant] + plan$plantationDensity
         ## storing planted site
         plant[["postSalv"]][[y]][index[indexSalvPlant]] <- 1
-        if(plan$plantationSp[["postSalv"]] != "same") {
+        if(plan$plantationSp[["postSalv"]] != "same" &
+           length(indexSalvPlant)>0) {
           ct_sp <- coverTypes_RAT[match(plan$plantationSp[["postSalv"]], coverTypes_RAT[,"value"]), "ID"]
-          ct[indexSalvPlant] <- ct_sp
+          ct[index[indexSalvPlant]] <- ct_sp
         }
         if(verbose) {
           print(paste(length(indexSalvPlant), "cell(s) planted (post-salvage)"))
@@ -423,14 +427,16 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
         print(paste("simulating post-fire plantation"))
       }
       indexFirePlant <- which(seedlingDens < plan$plantationThreshold &
+                                iqs > 0 &
                                 index %in%  which(values(plantEligible)))
       
       seedlingDens[indexFirePlant] <-  seedlingDens[indexFirePlant] + plan$plantationDensity
       ## storing planted site
       plant[["postFire"]][[y]][index[indexFirePlant]] <- 1
-      if(plan$plantationSp[["postFire"]] != "same") {
+      if(plan$plantationSp[["postFire"]] != "same" &
+         length(indexFirePlant)>0) {
         ct_sp <- coverTypes_RAT[match(plan$plantationSp[["postFire"]], coverTypes_RAT[,"value"]), "ID"]
-        ct[indexFirePlant] <- ct_sp
+        ct[index[indexFirePlant]] <- ct_sp
       }
       if(verbose) {
         print(paste(length(indexFirePlant), "cell(s) planted (post-fire)"))
@@ -471,7 +477,10 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
 
     ### creating new raster layer
     volAt120[[y]] <- v120
-    coverTypes[[y]] <- ct
+    if(sum(plan$plantationSp != "same") > 0) {
+      coverTypesDyn[[y]] <- ct
+    }
+    
     
     ################### updating tsd (do after updating density) ###############
     tsd[f] <- 0
@@ -635,22 +644,13 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
         harv[[y]][x] <-  v
       }
       
-      
-      
-      
-      
-      
       ####################### updating tsd
       tsd[x] <- 0
       
       
       v[g == 0] <- 0
     }
-    # else {
-    #   g <- v <- Ac
-    # }
-    
-    
+
     if(verbose) {
       print("##############################################################")
       print(paste("########## sim", i, "of", nRep, "- year", y,"of", simDuration, "- completed ############"))
@@ -685,8 +685,6 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   names(rho100) <- paste0("rho100_", 1:nlayers(rho100))
   volAt120 <- stack(volAt120)
   names(volAt120) <- paste0("volAt120_", 1:nlayers(volAt120))
-  coverTypes <- stack(coverTypes)
-  names(coverTypes) <- paste0("coverTypes_", 1:nlayers(coverTypes))
   
   ### optional stacks, can be missing layers
   stackFnc <- function(n, stackName = NULL) { ## where n is a string; the name of the list to stack, or a list
@@ -708,7 +706,7 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   }
   
   
-  for (n in c("harv", "salv",  "reten")) {
+  for (n in c("harv", "salv",  "reten", "coverTypesDyn")) {
     if(exists(n)) {
       assign(n, stackFnc(n))
     }
@@ -728,9 +726,6 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   print("saving outputFire_*.RData")
   save(fire, file = paste0(outputDir, "outputFire_", simID, ".RData"))
   
-  print("saving outputCoverTypes_*.RData")
-  save(coverTypes, file = paste0(outputDir, "outputCoverTypes_", simID, ".RData"))
-  
   print("saving outputTSD_*.RData")
   save(age, file = paste0(outputDir, "outputTSD_", simID, ".RData"))
   
@@ -744,6 +739,10 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     print("saving outputHarvest_*.RData")
     save(harv, file = paste0(outputDir, "outputHarvest_", simID, ".RData"))
   }
+  if(exists("coverTypesDyn")) {
+    print("saving outputCoverTypes_*.RData")
+    save(coverTypesDyn, file = paste0(outputDir, "outputCoverTypes__", simID, ".RData"))
+  }
   if(exists("salv")) {
     print("saving outputSalvage_*.RData")
     save(salv, file = paste0(outputDir, "outputSalvage_", simID, ".RData"))
@@ -756,7 +755,6 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     print("saving outputVolReten_*.RData")
     save(reten, file = paste0(outputDir, "outputVolReten_", simID, ".RData"))
   }
-  
   
   print("##############################################################")
   print("##############################################################")
