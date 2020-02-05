@@ -3,12 +3,12 @@
 ##### Main script driving the simulation
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
 ## setwd("C:/Users/dcyr-z840/Sync/Travail/ECCC/regenFailureRiskAssessment_phase3")
-# rm(list = ls())
-# ################################################################################
-# home <- path.expand("~")
-# home <- gsub("\\\\", "/", home) # necessary on some Windows machine
-# home <- gsub("/Documents", "", home) # necessary on my Windows machine
-# setwd(paste(home, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3/", sep ="/"))
+rm(list = ls())
+################################################################################
+home <- path.expand("~")
+home <- gsub("\\\\", "/", home) # necessary on some Windows machine
+home <- gsub("/Documents", "", home) # necessary on my Windows machine
+setwd(paste(home, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3/", sep ="/"))
 # setwd("D:/test/risqueAccidentRegen_phase3/")
 ################################################################################
 ################################################################################
@@ -21,7 +21,7 @@ setwd(wwd)
 nRep <- 100
 simDuration <- 100
 simStartYear <- 2015
-scen <- "baseline" #c("baseline", "RCP85")
+scen <- "RCP85" #c("baseline", "RCP85")
 noUAF <- T 
 stored <- c("stored", "noUAF", "nRep", "simDuration", "simStartYear", "scen")
 ################################################################################
@@ -239,7 +239,9 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   fire <- age <- rho100 <- volAt120 <- list()
   ct <- coverTypes
   ### creating list for optional outputs
-  harv <- list()
+  if(plan$targetHarvestLevels$SEPM > 0) {
+    harv <- list()
+  }
   if(plan$salvageLog) {
     salv <- list()
   }
@@ -261,8 +263,11 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
 
   for (y in 1:simDuration) {
     ####################### create rasters #####################################
-    harv[[y]] <- ct
-    harv[[y]][] <- NA
+    
+    if(exists("harv")) {
+      harv[[y]] <- ct
+      harv[[y]][] <- NA
+    }
     if(exists("salv")) {
       salv[[y]] <- ct
       salv[[y]][] <- NA
@@ -495,160 +500,163 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     ############################################################################
     ####################### simulating harvest #################################
     ############################################################################
-    if(verbose) {
-      print(paste0("simulating harvests ; sim ", simID, " ; year ", y))
-      if(plan$retentionCut) {
-        print("(retention cut)")
-      } else {
-        print("(clearcutting)")
-      }
-    }
-    
-    ##### eligible to harvest at a given timestep
-    eligible <- tsd > matThresh &
-      volAt120[[y]] >= volMinAt120
-    
-    x <- numeric() ## vector of cells to be harvested
-    for (u in plan$uaf) { ### identifying stands to harvest
-      ## checking for age structure conditions within uaf
-      old <- tsd>=plan$oldMinAge & !is.na(ct) & spEligible[[u]]
-      regen <- tsd<plan$regenMaxAge & !is.na(ct) & spEligible[[u]]
-      
-      ## computing proportions of old and regen
-      propOld <- sum(values(old), na.rm = T) / sum(values(spEligible[[u]]), na.rm = T)
-      propRegen <- sum(values(regen), na.rm = T) / sum(values(spEligible[[u]]), na.rm = T)
-      ## computing remaining
-      marginOld <- propOld - plan$oldMinProp
-      marginRegen <- plan$regenMaxProp - propRegen
-      ## determining the amount that was salvaged within the uaf
-      sU <- which(values(spEligible[[u]]) & values(s)) 
-      salvProp <- length(sU) / sum(values(spEligible[[u]]), na.rm = T)  
-      salvPropVolEquiv <- salvProp*plan$salvageWoodPropLost$SEPM
-      
-      if(marginOld > 0  &
-         marginRegen > 0 &
-         salvPropVolEquiv < plan$targetHarvestLevels[["SEPM"]]) {
-        
-        ## determining the number of cells to harvest
-        prop <- min(plan$targetHarvestLevels[["SEPM"]] - salvPropVolEquiv,
-                 marginOld, marginRegen)
-        nCell <- round(prop * sum(values(spEligible[[u]]), na.rm = T))
-        ## eligible cells
-        index <- which(values(eligible[[u]]))
-        ## sampling cells
-        if (length(index) == 1 &
-            nCell >=1) {
-          x <- append(x, index)
+    if(plan$targetHarvestLevels$SEPM > 0) {
+      if(verbose) {
+        print(paste0("simulating harvests ; sim ", simID, " ; year ", y))
+        if(plan$retentionCut) {
+          print("(retention cut)")
         } else {
-          x <- append(x, sample(index,
-                                size = min(length(index), nCell)))
+          print("(clearcutting)")
+        }
+      }
+      
+      ##### eligible to harvest at a given timestep
+      eligible <- tsd > matThresh &
+        volAt120[[y]] >= volMinAt120
+      
+      x <- numeric() ## vector of cells to be harvested
+      for (u in plan$uaf) { ### identifying stands to harvest
+        ## checking for age structure conditions within uaf
+        old <- tsd>=plan$oldMinAge & !is.na(ct) & spEligible[[u]]
+        regen <- tsd<plan$regenMaxAge & !is.na(ct) & spEligible[[u]]
+        
+        ## computing proportions of old and regen
+        propOld <- sum(values(old), na.rm = T) / sum(values(spEligible[[u]]), na.rm = T)
+        propRegen <- sum(values(regen), na.rm = T) / sum(values(spEligible[[u]]), na.rm = T)
+        ## computing remaining
+        marginOld <- propOld - plan$oldMinProp
+        marginRegen <- plan$regenMaxProp - propRegen
+        ## determining the amount that was salvaged within the uaf
+        sU <- which(values(spEligible[[u]]) & values(s)) 
+        salvProp <- length(sU) / sum(values(spEligible[[u]]), na.rm = T)  
+        salvPropVolEquiv <- salvProp*plan$salvageWoodPropLost$SEPM
+        
+        if(marginOld > 0  &
+           marginRegen > 0 &
+           salvPropVolEquiv < plan$targetHarvestLevels[["SEPM"]]) {
+          
+          ## determining the number of cells to harvest
+          prop <- min(plan$targetHarvestLevels[["SEPM"]] - salvPropVolEquiv,
+                      marginOld, marginRegen)
+          nCell <- round(prop * sum(values(spEligible[[u]]), na.rm = T))
+          ## eligible cells
+          index <- which(values(eligible[[u]]))
+          ## sampling cells
+          if (length(index) == 1 &
+              nCell >=1) {
+            x <- append(x, index)
+          } else {
+            x <- append(x, sample(index,
+                                  size = min(length(index), nCell)))
+          }
+          
+          
+        }
+      }
+      
+      
+      ################ stand attributes, focussing on harvested stands
+      if(verbose) {
+        print("Computing stand attribute in harvested cells")
+      }
+      
+      iqs <- iqs_extract(stands = x)
+      a <- age_extract(stands = x)
+      sp <- sp_extract(r = ct,
+                       stands = x)
+      # t1 <- round(tFnc(sp, iqs, tCoef))
+      r100 <- IDR100_extract(stands = x)
+      ## age at 1m
+      
+      Ac <- ac_extract(a = a,
+                       sp = sp,
+                       iqs = iqs,
+                       tCoef = tCoef,
+                       tFnc = tFnc,
+                       cap = 150)
+      Hd <- HdFnc(sp, Ac, iqs, HdCoef)
+      
+      if(length(x) > 0) {
+        
+        ## basal area (all diameters, Ac >= 25)
+        g <- g_extract(sp,
+                       Ac,
+                       iqs,
+                       rho100 = r100,
+                       HdCoef,
+                       GCoef,
+                       rho100Coef,
+                       withSenescence = F,
+                       DqCoef,
+                       merchantable = T)
+        
+        ## standing merchantable volume 
+        v <- VFnc(sp = sp, Ac = Ac, iqs = iqs, rho100 = r100,
+                  rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef, DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
+                  scenesCoef = NULL, withSenescence = F)
+        
+        if(plan$retentionCut) {
+          if(verbose) {
+            print("simulating retention cut")
+          }
+          
+          ### what would be the basal area needed to regenerate at retentionCutTarget if 
+          #  that stands burned 
+          
+          ### scan levels of retention to assure 50 cubic-m at 120 yrs old in case of fire (brute force)
+          propRetenVals <- seq(0, 1, 0.05)
+          seedlingDens <- matrix(NA,
+                                 nrow = length(g),
+                                 ncol = length(propRetenVals))
+          
+          ######################################################################################################
+          ### predicting seedling density in case of fire
+          for (j in seq_along(propRetenVals)) {
+            seedlingDens[, j] <- seedlingFnc(sp = sp, Ac = Ac,
+                                             G = g * propRetenVals[j],
+                                             iqs = iqs,
+                                             seedCoef = seedCoef, tCoef = tCoef)
+          }
+          
+          
+          rho100At120 <- matrix(apply(seedlingDens, 2, function(x) doQmapQUANT(x = x,
+                                                                               fobj = seedlingQMapFit,
+                                                                               type = "linear")),
+                                nrow = length(g))
+          
+          ### vol at 120 if retention portion burned the same year
+          v120 <- matrix(apply(rho100At120, 2, function(x) VFnc(sp = sp, Ac = Ac,
+                                                                iqs = iqs, rho100 = x,
+                                                                rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef,
+                                                                DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
+                                                                scenesCoef = NULL, withSenescence = F)),
+                         nrow = length(g))
+          
+          
+          propRetention <- suppressWarnings(
+            propRetenVals[apply(v120, 1, function(x) min(which(x >= plan$retentionCutTarget)))]
+          )
+          propRetention[is.na(propRetention)] <- 1
+          
+          ### storing values (to be written out)
+          reten[[y]][x] <-  round(propRetention * v, 1)
+          harv[[y]][x] <-  round(v - (propRetention * v), 1)
+          
+          ### storing values (temporary)
+          stSetAside[x] <- round(propRetention * g, 1)
+          
+        } else {
+          harv[[y]][x] <-  v
         }
         
+        ####################### updating tsd
+        tsd[x] <- 0
         
+        
+        v[g == 0] <- 0
       }
     }
     
-
-    ################ stand attributes, focussing on harvested stands
-    if(verbose) {
-      print("Computing stand attribute in harvested cells")
-    }
-    
-    iqs <- iqs_extract(stands = x)
-    a <- age_extract(stands = x)
-    sp <- sp_extract(r = ct,
-                     stands = x)
-    # t1 <- round(tFnc(sp, iqs, tCoef))
-    r100 <- IDR100_extract(stands = x)
-    ## age at 1m
-    
-    Ac <- ac_extract(a = a,
-                     sp = sp,
-                     iqs = iqs,
-                     tCoef = tCoef,
-                     tFnc = tFnc,
-                     cap = 150)
-    Hd <- HdFnc(sp, Ac, iqs, HdCoef)
-    
-    if(length(x) > 0) {
-      
-      ## basal area (all diameters, Ac >= 25)
-      g <- g_extract(sp,
-                     Ac,
-                     iqs,
-                     rho100 = r100,
-                     HdCoef,
-                     GCoef,
-                     rho100Coef,
-                     withSenescence = F,
-                     DqCoef,
-                     merchantable = T)
-      
-      ## standing merchantable volume 
-      v <- VFnc(sp = sp, Ac = Ac, iqs = iqs, rho100 = r100,
-                rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef, DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
-                scenesCoef = NULL, withSenescence = F)
-      
-      if(plan$retentionCut) {
-        if(verbose) {
-          print("simulating retention cut")
-        }
-        
-        ### what would be the basal area needed to regenerate at retentionCutTarget if 
-        #  that stands burned 
-        
-        ### scan levels of retention to assure 50 cubic-m at 120 yrs old in case of fire (brute force)
-        propRetenVals <- seq(0, 1, 0.05)
-        seedlingDens <- matrix(NA,
-                               nrow = length(g),
-                               ncol = length(propRetenVals))
-        
-        ######################################################################################################
-        ### predicting seedling density in case of fire
-        for (j in seq_along(propRetenVals)) {
-          seedlingDens[, j] <- seedlingFnc(sp = sp, Ac = Ac,
-                                           G = g * propRetenVals[j],
-                                           iqs = iqs,
-                                           seedCoef = seedCoef, tCoef = tCoef)
-        }
-        
-        
-        rho100At120 <- matrix(apply(seedlingDens, 2, function(x) doQmapQUANT(x = x,
-                                                                             fobj = seedlingQMapFit,
-                                                                             type = "linear")),
-                              nrow = length(g))
-        
-        ### vol at 120 if retention portion burned the same year
-        v120 <- matrix(apply(rho100At120, 2, function(x) VFnc(sp = sp, Ac = Ac,
-                                                              iqs = iqs, rho100 = x,
-                                                              rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef,
-                                                              DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
-                                                              scenesCoef = NULL, withSenescence = F)),
-                       nrow = length(g))
-        
-        
-        propRetention <- suppressWarnings(
-          propRetenVals[apply(v120, 1, function(x) min(which(x >= plan$retentionCutTarget)))]
-        )
-        propRetention[is.na(propRetention)] <- 1
-        
-        ### storing values (to be written out)
-        reten[[y]][x] <-  round(propRetention * v, 1)
-        harv[[y]][x] <-  round(v - (propRetention * v), 1)
-        
-        ### storing values (temporary)
-        stSetAside[x] <- round(propRetention * g, 1)
-        
-      } else {
-        harv[[y]][x] <-  v
-      }
-      
-      ####################### updating tsd
-      tsd[x] <- 0
-      
-      
-      v[g == 0] <- 0
-    }
 
     if(verbose) {
       print("##############################################################")
