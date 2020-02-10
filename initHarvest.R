@@ -23,8 +23,8 @@ oldMinAge <- 100
 ## Access limitation
 limitedAccess <- c(harv = F,
                    salv = F,
-                   plant = T,
-                   reten = T)
+                   plant = F,
+                   reten = F)
 
 ## salvage logging parameters
 salvageLog <- F

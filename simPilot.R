@@ -133,14 +133,14 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
       plantEligible <- harvEligible
     }
   }
-  if(plan$retentionCut) {
-    ## eligible to retention cutting
-    if(plan$limitedAccess["reten"]) {
-      retenEligible <- harvEligible & roadAccess
-    } else {
-      retenEligible <- harvEligible
-    }
-  }
+  # if(plan$retentionCut) {
+  #   ## eligible to retention cutting
+  #   if(plan$limitedAccess["reten"]) {
+  #     retenEligible <- harvEligible & roadAccess
+  #   } else {
+  #     retenEligible <- harvEligible
+  #   }
+  # }
   
   
   
@@ -351,6 +351,8 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
       g <- v <- Ac
     }
     
+    s <- studyArea
+    s[] <- NA
     ########################### Salvage logging ################################
     if(plan$salvageLog) {
       if(verbose) {
@@ -371,8 +373,6 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
       nCell <- round(nCell)
       salvageIndex <- salvageIndex[sample(1:nrow(salvageIndex),nCell),]
       
-      s <- studyArea
-      s[] <- NA
       s[salvageIndex$index] <- salvageIndex$vSalv
       # # ## saving salvaged cells for testing purposes
       # save(s, file = paste0(outputDir, "s_", y, ".RData"))
