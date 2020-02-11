@@ -2,7 +2,7 @@
 ###################################################################################################
 ##### Compiling raw fire outputs to a tidy data frame
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario", "clusterN", "fr", "mgmt"))])
+rm(list = ls()[-which(ls() %in% c("sourceDir", "simInfo", "clusterN"))])
 # #######
 # rm(list = ls())
 # setwd("D:/test/risqueAccidentRegen_phase3/100rep_baseline/")
@@ -15,17 +15,18 @@ rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario", "clusterN", "fr", "mg
 
 
 #################
-#require(rgdal)
 require(raster)
-#require(rgeos)
 require(dplyr)
-
     ####################################################################
-for(s in seq_along(scenario)) {
-    scen <- scenario[s]
-        
-    studyArea <- raster(paste0("../", scen, "/studyArea.tif"))
-    fireZones <- raster(paste0("../", scen, "/fireZones.tif"))
+for(s in 1:length(simInfo$simID)) {
+    
+    simDir <- simInfo$simDir[s]
+    fr <- simInfo$fire[s]
+    mgmt <- simInfo$mgmt[s]
+    simID <- simInfo$simID[s]
+    
+    studyArea <- raster(paste0("../", simDir, "/studyArea.tif"))
+    fireZones <- raster(paste0("../", simDir, "/fireZones.tif"))
     
     ## focusing on fireZones in studyArea
     z <- which(zonal(studyArea, fireZones, sum)[,"value"]>1)
@@ -47,16 +48,20 @@ for(s in seq_along(scenario)) {
     ######
     ######      compiling simulation outputs
     ######
-    outputFolder <- paste0("../", scen, "/output")
+    outputFolder <- paste0("../", simDir, "/output")
     x <- list.files(outputFolder)
     
     index <- grep(".RData", x)
     index <- intersect(index, grep("Fire", x))
     x <- x[index]
-    simInfo <- gsub(".RData", "", x)
-    simInfo <- strsplit(simInfo, "_")
-    replicates <- as.numeric(lapply(simInfo, function(x) x[2]))
-    rm(simInfo)
+    
+    if(length(x) == 0) {
+        break
+    }
+    
+    replicates <- gsub(".RData", "", x)
+    replicates <- strsplit(replicates, "_")
+    replicates <- as.numeric(lapply(replicates, function(x) x[2]))
     ###########################################
     
     
@@ -94,15 +99,12 @@ for(s in seq_along(scenario)) {
         areaBurned <- data.frame(year, replicate = r,
                                  areaBurned_ha = areaBurned)
         
-        # out <- melt(areaBurned,
-        #             id.vars = c("year", "replicate"),
-        #             value.name = "areaBurnedTotal_ha")
-        
-        out <- data.frame(scenario = fr,
-                          mgmt = mgmt,
+        out <- data.frame(simID = simID,
+                          fireScenario = fr,
+                          mgmtScenario = mgmt,
                           areaBurned)
         
-        print(paste("fire", fr[s], r))
+        print(paste(s, "fire", fr, r))
         return(out)
         
     }
@@ -110,7 +112,8 @@ for(s in seq_along(scenario)) {
     stopCluster(cl)
     
     outputCompiled <- merge(outputCompiled, fireZoneArea)
-    outputCompiled <- arrange(outputCompiled, scenario, mgmt, replicate, year)
+    outputCompiled <- arrange(outputCompiled, simID,
+                              replicate, year)
     
-    save(outputCompiled, file = paste0("outputCompiledFire_", scen, ".RData"))
+    save(outputCompiled, file = paste0("outputCompiledFire_", simID, ".RData"))
 }         

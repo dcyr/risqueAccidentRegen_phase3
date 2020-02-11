@@ -2,35 +2,42 @@
 ###################################################################################################
 ##### Compiling relative density outputs to tidy data frames
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario", "clusterN"))])
-#######
+rm(list = ls()[-which(ls() %in% c("sourceDir", "simInfo", "clusterN"))])
+# #######
 # rm(list = ls())
-# setwd("D:/regenFailureRiskAssessmentData_phase2/2018-10-29")
+# setwd("D:/test/risqueAccidentRegen_phase3/100rep_baseline/")
 # ####################################################################################################
-# ###########################################
 # scenario <- "baseline"
 # ####################################################################################################
 # wwd <- paste(getwd(), Sys.Date(), sep = "/")
 # dir.create(wwd)
 # setwd(wwd)
-#################
+
+
 #require(rgdal)
 require(raster)
 #require(rgeos)
 require(dplyr)
-
-for (s in scenario) {
+for(s in 1:length(simInfo$simID)) {
+    
+    simDir <- simInfo$simDir[s]
+    fr <- simInfo$fire[s]
+    mgmt <- simInfo$mgmt[s]
+    simID <- simInfo$simID[s]
+    ctDyn <- simInfo$ctDyn[s]
+    
     ## loading management plan (to fetch commercial cover types )
-    managementPlan <- get(load(paste0("../", s,"/managementPlan.RData")))
+    managementPlan <- get(load(paste0("../", simDir,"/managementPlan.RData")))
     plan <- managementPlan[["baseline"]] 
-    x <- list.files(paste0("../", s,"/output"))
+    x <- list.files(paste0("../", simDir,"/output"))
     index <- grep(".RData", x)
     index <- intersect(index, grep("outputVolAt120", x))
     x <- x[index]
-    simID <- gsub(".RData", "", x)
-    simID <- strsplit(simID, "_")
-    simID <- as.character(lapply(simID, function(x) x[[2]]))
+    replicates <- gsub(".RData", "", x)
+    replicates <- strsplit(replicates, "_")
+    replicates <- as.character(lapply(replicates, function(x) x[2]))
 
+   
     ########################################################################################################
     require(doSNOW)
     require(parallel)
@@ -41,24 +48,38 @@ for (s in scenario) {
     cl = makeCluster(clusterN, outfile = "") ##
     registerDoSNOW(cl)
     #######
-    outputCompiled <- foreach(i = seq_along(x), .combine = "rbind") %dopar% {
+    outputCompiled <- foreach(i =  seq_along(x), .combine = "rbind") %dopar% {#
         
         require(raster)
         require(reshape2)
         require(dplyr)
+        require(tidyr)
         
-        r <- simID[i]
+        r <- replicates[i]
         
         ## could be outside this loop at the moment, but will eventually be dynamics
         ## will need to be dynamics when covertypes will be dynamics
-        coverTypes <- raster(paste0("../", s, "/coverTypes.tif"))
-        coverTypes_RAT <- read.csv(paste0("../", s, "/coverTypes_RAT.csv"))
-        ctVal <- values(coverTypes)
+        coverTypes <- raster(paste0("../", simDir, "/output/coverTypesInit_", r, ".tif"))
+        names(coverTypes) <- paste0("coverTypesDyn_0")
+        ctStack <- paste0("../",simDir , "/output/outputCoverTypes_", r, ".RData")
         convFactor <- prod(res(coverTypes))/10000### to convert to hectares
-
-        volAt120 <- get(load(paste0("../", s, "/output/outputVolAt120_", simID[i], ".RData")))
+        
+        if(file.exists(ctStack)) {
+            coverTypesDyn <- get(load(ctStack))
+            coverTypes <- stack(coverTypes, coverTypesDyn) 
+            rm(coverTypesDyn)
+        }
+        ######################################################################
+        ######################################################################
+        ######################################################################
+        ######################################################################
+        ######################################################################
+        coverTypes_RAT <- read.csv(paste0("../", simDir, "/coverTypes_RAT.csv"))
+        ctVal <- values(coverTypes)
+        
+        volAt120 <- get(load(paste0("../", simDir, "/output/outputVolAt120_", r, ".RData")))
         ### volAt120Init
-        volAt120Init <- raster(paste0("../", s, "/output/volAt120init_", simID[i], ".tif"))
+        volAt120Init <- raster(paste0("../", simDir, "/output/volAt120init_", r, ".tif"))
         names(volAt120Init) <- "volAt120_0"
         volAt120 <- stack(volAt120Init, volAt120)
         
@@ -80,49 +101,48 @@ for (s in scenario) {
        
         out <- list()
         for (sp in c("EN", "PG")) {
+            
             ctID <- coverTypes_RAT[match(sp, coverTypes_RAT$value), "ID"]
-            index <- which(ctVal == ctID)
             
-            tmp <- volAt120Cls[index,]
-            tmp <- apply(tmp, 2, table, useNA = "always")
-            
-            ### sometimes need to be converted into a data.frame if number of element differ among years
-            if(class(tmp) == "list") {
-                cNames <- names(tmp[[1]])
-                cNames[is.na(cNames)] <- "N/A"
-                df <- data.frame(matrix(NA,
-                                        ncol = length(cNames),
-                                       nrow = length(tmp)))
-                colnames(df) <- cNames
-                for (y in 1:length(tmp)) {
-                    x <- tmp[[y]]
-                    j <- names(x)
-                    j[is.na(j)] <- "N/A"
-                    df[y, j] <- x
-                    df[is.na(df)] <- 0
-                    tmp <- t(df)
+            for (j in 1:ncol(volAt120Cls)) {
+                
+                cName <-  colnames(volAt120Cls)[j]
+                y <- as.numeric(gsub("volAt120_", "", cName))
+                
+                if(ctDyn) {
+                    index <- which(ctVal[,j] == ctID) 
+                } else {
+                    index <- which(ctVal == ctID)
                 }
-            } else {
-                rownames(tmp)[is.na(rownames(tmp))] <- "N/A"
+                v120Cls <- volAt120Cls[index, j]
+                v120Cls <- data.frame(t(table(v120Cls, useNA = "always")))[,c("v120Cls", "Freq")]
+                v120Cls <- data.frame(v120Cls = v120Cls$v120Cls,
+                                      area_ha = v120Cls$Freq * convFactor)
+                colnames(v120Cls) <- c("volAt120Cls", paste0("area_ha_", y))
+                
+                if (j == 1) {
+                    tmp <- v120Cls    
+                } else  {
+                    tmp <- merge(tmp, v120Cls, by = "volAt120Cls", all = T)
+                }
             }
-            tmp <- tmp * convFactor
-            tmp <- tmp %>%
-                melt(value.name = "area_ha") %>%
-                mutate(year = as.numeric(gsub("volAt120_", "", Var2)),
-                       volAt120Cls = Var1,
-                       coverType = sp,
-                       scenario = s,
-                       simID = r) %>%
-                select(scenario, simID, coverType, year, volAt120Cls, area_ha)
-            out[[sp]] <- tmp
+            out[[sp]] <- gather(tmp, year, area_ha, -volAt120Cls) %>%
+                mutate(year = as.numeric(gsub("area_ha_", "", year)),
+                       coverType = sp)
         }
-        out <- do.call("rbind", out)
-        print(paste("outputVolAt120", s, r))
-            
+        
+        out <- do.call("rbind", out) %>%
+            mutate(simID = simID,
+                   replicate = as.numeric(r),
+                   fireScenario = fr,
+                   mgmtScenario = mgmt) %>%
+            select(simID, fireScenario, mgmtScenario, replicate, year, coverType,  volAt120Cls, area_ha) %>%
+            arrange(simID, fireScenario, mgmtScenario, replicate, year)
+        
+        print(paste(simID, "volAt120", r))
         return(out)
     }
     
     stopCluster(cl)
-    outputCompiled <- arrange(outputCompiled, scenario, simID, year, coverType, volAt120Cls)
-    save(outputCompiled, file = paste0("outputCompiledVolAt120_", s, ".RData"))
+    save(outputCompiled, file = paste0("outputCompiledVolAt120_", simID, ".RData"))
 }

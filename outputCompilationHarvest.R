@@ -2,7 +2,7 @@
 ###################################################################################################
 ##### Compiling raw harvest outputs to a tidy data frame
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario", "clusterN", "fr", "mgmt", "initYear"))])
+rm(list = ls()[-which(ls() %in% c("sourceDir", "simInfo", "clusterN"))])
 # #######
 # rm(list = ls())
 # setwd("D:/test/risqueAccidentRegen_phase3/100rep_baseline/")
@@ -18,14 +18,18 @@ rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario", "clusterN", "fr", "mg
 require(raster)
 #require(rgeos)
 require(dplyr)
-for(s in seq_along(scenario)) {
-    scen <- scenario[s]
+for(s in 1:length(simInfo$simID)) {
+    
+    simDir <- simInfo$simDir[s]
+    fr <- simInfo$fire[s]
+    mgmt <- simInfo$mgmt[s]
+    simID <- simInfo$simID[s]
     
     ####################################################################
-    studyArea <- raster(paste0("../", scen, "/studyArea.tif"))
-    uaf <- raster(paste0("../", scen, "/uaf.tif"))
+    studyArea <- raster(paste0("../", simDir, "/studyArea.tif"))
+    uaf <- raster(paste0("../", simDir, "/uaf.tif"))
     #subZones <- raster
-    uaf_RAT <- read.csv(paste0("../", scen, "/uaf_RAT.csv"))
+    uaf_RAT <- read.csv(paste0("../", simDir, "/uaf_RAT.csv"))
     ##
     convFactor <- prod(res(studyArea))/10000### to convert to hectares
     
@@ -34,15 +38,18 @@ for(s in seq_along(scenario)) {
     ######
     ######      compiling simulation outputs
     ######
-    outputFolder <- paste0("../", scen, "/output")
+    outputFolder <- paste0("../", simDir, "/output")
     x <- list.files(outputFolder)
     index <- grep(".RData", x)
     index <- intersect(index, grep("Harvest", x))
     x <- x[index]
-    simInfo <- gsub(".RData", "", x)
-    simInfo <- strsplit(simInfo, "_")
+    if(length(x) ==0) {
+        next
+    }
+    replicates <- gsub(".RData", "", x)
+    replicates <- strsplit(replicates, "_")
     #scenario <- as.character(lapply(simInfo, function(x) x[[2]]))
-    replicates <- as.numeric(lapply(simInfo, function(x) x[2]))
+    replicates <- as.numeric(lapply(replicates, function(x) x[2]))
     ###########################################
     ###########################################
     
@@ -194,9 +201,19 @@ for(s in seq_along(scenario)) {
         plantation <- file.exists(plant)
         if(plantation) {
             plant <- get(load(plant)) 
+            plantNames <- names(plant)
             
-            areaPlantPostSalv <- zonal(plant$postSalv > 0, uaf,  "sum")[,-1] * convFactor
-            areaPlantPostFire <- zonal(plant$postFire > 0, uaf,  "sum")[,-1] * convFactor
+            if("postSalv" %in% c(plantNames)) {
+                areaPlantPostSalv <- zonal(plant$postSalv > 0, uaf,  "sum")[,-1] * convFactor
+            } else {
+                areaPlantPostSalv <- rep(0, nlayers(plant$postFire))
+            }
+            if("postFire" %in% c(plantNames)) {
+                areaPlantPostFire <- zonal(plant$postFire > 0, uaf,  "sum")[,-1] * convFactor
+            } else {
+                areaPlantPostFire <- rep(0, nlayers(plant$postSalv))
+            }
+            
             rm(plant)
             
             if(!is.numeric(areaPlantPostSalv)) {
@@ -259,14 +276,16 @@ for(s in seq_along(scenario)) {
             out <- out %>%
                 merge(areaPlant)
         } else {
-            out[,"areaPlantTotal_ha"] <- 0
+            out[, c("areaPlantPostSalv_ha", "areaPlantPostFire_ha")] <- 0
         }
         
         out <- out %>%
-            mutate(replicate = r,
-                   scenario = fr[s],
-                   mgmt = mgmt[s]) %>%
-            select(scenario, mgmt, replicate, year, uaf,
+            mutate(simID = simID, 
+                   replicate = r,
+                   fireScenario = fr,
+                   mgmtScenario = mgmt) %>%
+            select(simID, fireScenario, mgmtScenario,
+                   replicate, year, uaf,
                    areaHarvestedTotal_ha,
                    volHarvestedTotal_cubMeter,
                    areaSalvagedTotal_ha,
@@ -277,13 +296,13 @@ for(s in seq_along(scenario)) {
                    areaPlantPostFire_ha
                    )
             
-        print(paste("harvest", scen, r))
+        print(paste(simID, "harvest", r))
         return(out)
         
     }
     
     stopCluster(cl)
-    outputCompiled <- arrange(outputCompiled, scenario, mgmt, uaf, year)
+    outputCompiled <- arrange(outputCompiled, simID, uaf, year)
     
-    save(outputCompiled, file = paste0("outputCompiledHarvest_", scen, ".RData"))
+    save(outputCompiled, file = paste0("outputCompiledHarvest_", simID, ".RData"))
 }
