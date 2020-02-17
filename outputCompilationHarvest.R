@@ -283,7 +283,10 @@ for(s in 1:length(simInfo$simID)) {
             mutate(simID = simID, 
                    replicate = r,
                    fireScenario = fr,
-                   mgmtScenario = mgmt) %>%
+                   mgmtScenario = mgmt,
+                   volHarvestedTotal_cubMeter = round(volHarvestedTotal_cubMeter, 1),
+                   volSalvagedTotal_cubMeter = round(volSalvagedTotal_cubMeter, 1),
+                   volRetenTotal_cubMeter = round(volRetenTotal_cubMeter, 1)) %>%
             select(simID, fireScenario, mgmtScenario,
                    replicate, year, uaf,
                    areaHarvestedTotal_ha,
