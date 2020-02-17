@@ -2,13 +2,7 @@
 ###################################################################################################
 ##### Visualizing harvest simulations
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario", "clusterN", "fr", "mgmt", "initYear"))])
-# setwd("D:/regenFailureRiskAssessmentData_phase2/2018-11-07_coupe0.31_recup70")
-# wwd <- paste(getwd(), Sys.Date(), sep = "/")
-# dir.create(wwd)
-# setwd(wwd)
-# #####
-# scenario  <-  "coupe0.31_recup70"
+rm(list = ls()[-which(ls() %in% c("sourceDir", "simInfo"))])
 #################
 require(raster)
 require(ggplot2)
@@ -16,23 +10,29 @@ require(dplyr)
 require(reshape2)
 
 harvTarget <- output <- list()
-
-for(s in seq_along(scenario)) {
+for (s in seq_along(simInfo$simID)) {
+    
+    simID <- simInfo$simID[s]
+    simDir <- simInfo$simDir[s]
+    fr <- simInfo$fire[s]
+    mgmt <- simInfo$mgmt[s]
+    initYear <- simInfo$initYear
+    
     ####################################################################
     ####################################################################
     ######
-    studyArea <- raster(paste0("../", scenario[s], "/studyArea.tif"))
+    studyArea <- raster(paste0("../", simDir, "/studyArea.tif"))
     convFactor <- prod(res(studyArea))/10000### to convert to hectares
-    uaf <- raster(paste0("../", scenario[s], "/uaf.tif"))
-    uaf_RAT <- read.csv(paste0("../", scenario[s], "/uaf_RAT.csv"))
+    uaf <- raster(paste0("../", simDir, "/uaf.tif"))
+    uaf_RAT <- read.csv(paste0("../", simDir, "/uaf_RAT.csv"))
     
-    subZones <- raster(paste0("../", scenario[s], "/subZones.tif"))
-    subZones_RAT <- read.csv(paste0("../", scenario[s], "/subZones_RAT.csv"))
+    subZones <- raster(paste0("../", simDir, "/subZones.tif"))
+    subZones_RAT <- read.csv(paste0("../", simDir, "/subZones_RAT.csv"))
     
-    coverTypes <- raster(paste0("../", scenario[s], "/coverTypes.tif"))
-    coverTypes_RAT <- read.csv(paste0("../", scenario[s], "/coverTypes_RAT.csv"))
+    coverTypes <- raster(paste0("../", simDir, "/coverTypes.tif"))
+    coverTypes_RAT <- read.csv(paste0("../", simDir, "/coverTypes_RAT.csv"))
     
-    plan <- get(load(paste0("../", scenario[s], "/managementPlan.RData")))[["baseline"]]
+    plan <- get(load(paste0("../", simDir, "/managementPlan.RData")))[["baseline"]]
     
     ## eligible to harvest
     harvEligible <- uaf %in% plan$uaf &
@@ -55,15 +55,19 @@ for(s in seq_along(scenario)) {
     # target <- rbind(target, data.frame(id = NA, uaf = "total",
     #                                    totalEligibleArea_ha = sum(target$totalEligibleArea_ha),
     #                                    harvTargetArea_ha = sum(target$harvTargetArea_ha))) 
-    target[,"scenario"] <- fr[s]
-    target[,"mgmt"] <- mgmt[s]
+    target[,"fireScenario"] <- fr
+    target[,"mgmtScenario"] <- mgmt
     
-    harvTarget[[scenario[s]]] <- target
+    harvTarget[[simID]] <- target
     
     ### fetching compiled results
-    output[[scenario[s]]] <-  get(load(paste0(paste0("../outputCompiled/outputCompiledHarvest_", scenario[s], ".RData"))))
-    rm(outputCompiled)
-
+    outputFile <- paste0("../outputCompiled/outputCompiledHarvest_", simID, ".RData")
+    if(file.exists(outputFile)) {
+        output[[simID]] <-  get(load(paste0(paste0("../outputCompiled/outputCompiledHarvest_", simID, ".RData"))))
+        rm(outputCompiled)    
+    }
+    print(simID)
+    
 }
 
 if(length(output)>1) {
@@ -71,14 +75,26 @@ if(length(output)>1) {
     harvTarget <- do.call("rbind", harvTarget)
 } else {
     output <- output[[scenario]]
-    harvTarget <- harvTarget[[scenario[s]]]
+    harvTarget <- harvTarget[[simID]]
 }
-nSims <- length(unique(output$replicate))
+# nSims <- output %>% 
+#     group_by(mgmtScenario, year) %>%
+#     summarize(n = n()) %>%
+#     distinct(fireScenario, n) %>%
+#     as.data.frame()
 
 ### summarizing results, percentile & such
 output <- filter(output, uaf == "total")
 output <- merge(output, harvTarget, all.x = T)
-targetTotal <- target[target$uaf == "total", "harvTargetArea_ha"]
+
+
+output[,"clearcutting"] <- simInfo$clearcutting[match(output$simID, simInfo$simID)]
+output[,"varReten"] <- simInfo$varReten[match(output$simID, simInfo$simID)]
+output[,"salv"] <- simInfo$salv[match(output$simID, simInfo$simID)]
+output[,"plantPostFire"] <- simInfo$plantPostFire[match(output$simID, simInfo$simID)]
+output[,"plantPostSalv"] <- simInfo$plantPostSalv[match(output$simID, simInfo$simID)]
+output[,"plantPostSalvSp"] <- simInfo$plantPostSalvSp[match(output$simID, simInfo$simID)]
+
 ###
 
 
@@ -92,8 +108,9 @@ write.csv(summaryHarvest, paste0("harvestSummary.csv"), row.names = F)
 
 
 summaryHarvest <- summaryHarvest %>%
-    group_by(scenario, mgmt, uaf, year) %>%
-    summarise(p01HarvestProp = quantile(harvAreaTotal_ha, .01),
+    group_by(simID, fireScenario, mgmtScenario, uaf, year) %>%
+    summarise(meanHarvestProp = mean(harvAreaTotal_ha),
+              p01HarvestProp = quantile(harvAreaTotal_ha, .01),
               p05HarvestProp = quantile(harvAreaTotal_ha, .05),
               p10HarvestProp = quantile(harvAreaTotal_ha, .10),
               p25HarvestProp = quantile(harvAreaTotal_ha, .25),
@@ -133,90 +150,181 @@ summaryHarvest <- summaryHarvest %>%
 
 write.csv(summaryHarvest, paste0("harvestSummaryPercentiles.csv"), row.names = F)
 
+
+
+
 ##############################################################################
-### Plotting realized harvests 
+### Probability of shortfall 
 #######
 
-df <- summaryHarvest
+### summarizing results, shortfall probs
+shortfallDF <- output %>%
+    #group_by(scenario, year, replicate) %>%
+    mutate(harvAreaTotal_ha = areaHarvestedTotal_ha + areaSalvagedTotal_ha,
+           shortfall_tol75 = harvAreaTotal_ha < .25*harvTargetArea_ha,
+           shortfall_tol50 = harvAreaTotal_ha < .50*harvTargetArea_ha,
+           shortfall_tol25 = harvAreaTotal_ha < .75*harvTargetArea_ha,
+           shortfall_tol10 = harvAreaTotal_ha < .90*harvTargetArea_ha,
+           shortfall_tol05 = harvAreaTotal_ha < .95*harvTargetArea_ha) %>%
+    group_by(simID, fireScenario, mgmtScenario, replicate) %>%
+    arrange(year) %>%
+    mutate(shortfall_tol75 = cumsum(shortfall_tol75)>=1,
+           shortfall_tol50 = cumsum(shortfall_tol50)>=1,
+           shortfall_tol25 = cumsum(shortfall_tol25)>=1,
+           shortfall_tol10 = cumsum(shortfall_tol10)>=1,
+           shortfall_tol05 = cumsum(shortfall_tol05)>=1) %>%
+    ungroup() %>%
+    group_by(simID, fireScenario, mgmtScenario, year) %>%
+    summarise(shortfall_tol75 = sum(shortfall_tol75)/n(),
+              shortfall_tol50 = sum(shortfall_tol50)/n(),
+              shortfall_tol25 = sum(shortfall_tol25)/n(),
+              shortfall_tol10 = sum(shortfall_tol10)/n(),
+              shortfall_tol05 = sum(shortfall_tol05)/n())
 
-cols <- c(baseline = "orange",
-          RCP85 = "darkred")
-cols <- c(newFireImpl = "orange",
-          newPlantationRules = "darkred")
+##############################################################################
+### Plotting realized harvests - all mgmt scenarios
+#######
 
+varNames <- c(varReten = "Variable retention",
+              salv = "Salvage logging",
+              plantPostFire = "Post-fire plantation",
+              plantPostFireSp = "Planted species")
 
-m <- ggplot(df, aes(x = year + 2015,
-                    colour = mgmt,
-                    fill = mgmt)) +
-    #facet_grid(coverType ~ scenario) +
-    geom_line(aes(y =100 * p50HarvestProp/target),
-              size = 1) +
-    geom_ribbon(aes(y = NULL, colour = NULL,
-                    ymin = 100*p25HarvestProp/target, ymax = 100*p75HarvestProp/target),
-                alpha = 0.25) +
-    geom_line(aes(y = 100*p10HarvestProp/target),
-              size = 0.5, linetype = "dotted") +
+for(v in seq_along(varNames)) {
+    vLab <- varNames[v]
+    if(vLab == "Variable retention") {
+        sims <- simInfo$simID[which(simInfo$varReten)]
+        df <- summaryHarvest %>%
+            mutate(var = ifelse(simID %in% sims,
+                                 "Variable retention", "Traditional clearcutting"))
+        dfSf <- shortfallDF %>%
+            mutate(var = ifelse(simID %in% sims,
+                                "Variable retention", "Traditional clearcutting"))
+        
+        cols <- c("Variable retention" = "skyblue2",
+                  "Traditional clearcutting" = "darkorange1")
+    }
+    if(vLab == "Salvage logging") {
+        df <- summaryHarvest %>%
+            mutate(var = ifelse(simID %in% simInfo$simID[which(simInfo$salv)],
+                                "Salvage logging", "No salvage logging"))
+        dfSf <- shortfallDF %>%
+            mutate(var = ifelse(simID %in% simInfo$simID[which(simInfo$salv)],
+                                "Salvage logging", "No salvage logging"))
+        
+        cols <- c("Salvage logging" = "lightgoldenrod1",
+                  "No salvage logging" = "brown1")
+    }
+    if(vLab == "Post-fire plantation") {
+        df <- summaryHarvest %>%
+            mutate(var = ifelse(simID %in% simInfo$simID[which(simInfo$plantPostFire)],
+                                "Post-fire plantation", "No post-fire plantation"))
+        dfSf <- shortfallDF %>%
+            mutate(var = ifelse(simID %in% simInfo$simID[which(simInfo$plantPostFire)],
+                                "Post-fire plantation", "No post-fire plantation"))
+        cols <- c("Post-fire plantation" = "darkgoldenrod1",
+                  "No post-fire plantation" = "firebrick1")
+    }
+    if(vLab == "Planted species") {
+        df <- summaryHarvest %>%
+            filter(simID %in% simInfo$simID[which(simInfo$plantPostFireSp %in% c("same", "PG"))]) %>%
+            mutate(var = ifelse(simID %in% simInfo$simID[which(simInfo$plantPostFireSp == "PG")],
+                                "Planted species: Jack Pine", "Planted species: Same as before fire"))
+        dfSf <- shortfallDF %>%
+            filter(simID %in% simInfo$simID[which(simInfo$plantPostFireSp %in% c("same", "PG"))]) %>%
+            mutate(var = ifelse(simID %in% simInfo$simID[which(simInfo$plantPostFireSp == "PG")],
+                                "Planted species: Jack Pine", "Planted species: Same as before fire"))
+        
+        cols <- c("Planted species: Jack Pine" = "orange2",
+                  "Planted species: Same as before fire" = "grey")
+    }
+
     
-    scale_fill_manual(values = cols) +
-    scale_colour_manual(values = cols)
+    
+    
+    ############################################################################
+    ##### Proportion of target achieved
+    m <- ggplot(df, aes(x = year + 2015,
+                        group = mgmtScenario,
+                        colour = var)) +
+        facet_wrap(~ fireScenario, ncol = 1) +
+        geom_line(aes(y =100 * meanHarvestProp/target),
+                  size = 0.75) +
+        scale_colour_manual(values = cols)
+        
+    
+    png(filename = paste0("harvestRealized_", names(vLab), ".png"),
+        width = 8, height = 8, units = "in", res = 600, pointsize=10)
+    
+    options(scipen=999)
+    
+    print(m + theme_dark() +
+              
+              theme(legend.position="top", legend.direction="horizontal",
+                    legend.title = element_blank(),
+                    legend.text = element_text(size = rel(.75)),
+                    title = element_text(size = rel(0.85)),
+                    plot.caption = element_text(size = rel(0.65))) +
+              
+              labs(title = paste0("Proportion of harvest objectives realized"),
+                   x = "",
+                   y = "Proportion of harvest objectives realized (%)\n"))# +
+              #guides(col = guide_legend(nrow=4)))
+    
+    dev.off()
+    
+    ############################################################################
+    ##### Prob shortfall
+    # 
+    vars <- colnames(dfSf)
+    vars <- vars[grep("shortfall", vars)]
+    riskTol <- paste0(as.numeric(gsub("[^0-9]","", vars)), "%")
+    
+
+    require(reshape2)
+    m <- ggplot(dfSf, aes(x = year + 2015,
+                          y = 100 * shortfall_tol25,
+                          group = mgmtScenario,
+                          colour = var)) +
+        facet_wrap(~ fireScenario, ncol = 1) +
+        geom_line(size = 0.75) +
+        scale_colour_manual(values = cols)
+    
+    
+    png(filename= paste0("harvestShortfall_", names(vLab), ".png"),
+        width = 8, height = 8, units = "in", res = 600, pointsize=10)
+    options(scipen=999)
+    
+    print(m + theme_dark() +
+              
+              theme(legend.position="top", legend.direction="horizontal",
+                    legend.title = element_blank(),
+                    legend.text = element_text(size = rel(.75)),
+                    title = element_text(size = rel(0.85)),
+                    plot.caption = element_text(size = rel(0.65))) +
+              
+              labs(title = "Probability of timber supply shortfall",
+                   x = "",
+                   y = "Prob. of shorfall (%)\n"))# +
+    dev.off()
+}
 
 
-png(filename= paste0("harvestRealized.png"),
-    width = 8, height = 6, units = "in", res = 600, pointsize=10)
-
-options(scipen=999)
-
-print(m + theme_dark() +
-          
-          theme(#legend.position="top", legend.direction="horizontal",
-                legend.title = element_text(size = rel(0.85)),
-                title = element_text(size = rel(0.85)),
-                #plot.subtitle = element_text(size = rel(1)),
-                plot.caption = element_text(size = rel(0.65))) +
-          
-          labs(title = paste0("Proportion of harvest objectives realized"),
-               #subtitle = paste0(percentile, "e percentile"),
-               subtitle = paste0("Full lines and ribbons represent averages and 25th and 75th percentiles\n",
-                                 "Dotted lines represent 10th percentiles"),
-               # caption = paste0("Âge min. de récolte (sauf récup.) - Épinette noire: 90 ans\n",
-               #                  "Pin gris: 76 ans\n",
-               #                  "Vol. marchand min.: 50 m3/ha (Récup.: 70 m3/ha)\n",
-               #                  "Cycle des feux - baseline: 104 ans\n"),
-                                #"Min vieilles forÃªts (>=100 ans): 14%\n",
-                                #"Max régén. (< 20 ans): 35%"),
-               x = "",
-               y = "Proportion of harvest objectives realized (%)\n"))
-
-dev.off()
 
 
 
 
+ggplot(df, aes(x = year + 2015,
+               colour = mgmtScenario)) +
+    
+    geom_line(aes(y =100 * p50HarvestProp/target),
+              size = 0.75)
 
-##############################################################################
-### Plotting salvaged proportions
-#######
-
-# vars <- colnames(summaryHarvest)
-# vars <- vars[grep("SalvProp", vars)]
-# 
-# percentile <- as.numeric(gsub("[^0-9]","", vars))
-# #varName <- paste0(p, "Harvest_ha")
-# df <- summaryHarvest
-# ### reformatting harvest treatments for better readability
-# df <- melt(df, id.vars = c("scenario", "year"), 
-#            measure.vars = vars,
-#            variable.name = "prob")
-# df$prob <- as.numeric(gsub("[^0-9]","", df$prob))
-# df$prob <- paste0(df$prob, "%")
-# df$prob <- factor(df$prob, levels = c("1%", "5%", "25%", "50%", "75%", "95%", "99%"))
-# #target <- summaryHarvest
-# df <- filter(df, prob %in% c("25%", "50%", "75%"))
 
 m <- ggplot(df, aes(x = year + 2015,
-                    colour = mgmt,
+                    colour = mgmtScenario,
                     fill = mgmt)) +
-    #facet_grid(coverType ~ scenario) +
+    facet_wrap(~ fireScenario, ncol = 1) +
     geom_line(aes(y =100 * p50SalvProp),
               size = 1) +
     geom_ribbon(aes(y = NULL, colour = NULL,
@@ -257,83 +365,27 @@ print(m + theme_dark() +
 dev.off()
 
 
-##############################################################################
-### Plotting probability of shortfall 
-#######
-
-### summarizing results, shortfall probs
-shortfallDF <- output %>%
-    #group_by(scenario, year, replicate) %>%
-    mutate(harvAreaTotal_ha = areaHarvestedTotal_ha + areaSalvagedTotal_ha,
-           shortfall_tol75 = harvAreaTotal_ha < .25*harvTargetArea_ha,
-           shortfall_tol50 = harvAreaTotal_ha < .50*harvTargetArea_ha,
-           shortfall_tol25 = harvAreaTotal_ha < .75*harvTargetArea_ha,
-           shortfall_tol10 = harvAreaTotal_ha < .90*harvTargetArea_ha,
-           shortfall_tol05 = harvAreaTotal_ha < .95*harvTargetArea_ha) %>%
-    group_by(scenario, mgmt, replicate) %>%
-    arrange(year) %>%
-    mutate(shortfall_tol75 = cumsum(shortfall_tol75)>=1,
-           shortfall_tol50 = cumsum(shortfall_tol50)>=1,
-           shortfall_tol25 = cumsum(shortfall_tol25)>=1,
-           shortfall_tol10 = cumsum(shortfall_tol10)>=1,
-           shortfall_tol05 = cumsum(shortfall_tol05)>=1) %>%
-    ungroup() %>%
-    group_by(scenario, mgmt, year) %>%
-    summarise(shortfall_tol75 = sum(shortfall_tol75)/n(),
-              shortfall_tol50 = sum(shortfall_tol50)/n(),
-              shortfall_tol25 = sum(shortfall_tol25)/n(),
-              shortfall_tol10 = sum(shortfall_tol10)/n(),
-              shortfall_tol05 = sum(shortfall_tol05)/n())
-
 write.csv(shortfallDF, file = paste0("harvestShortfallPercentiles.csv"), row.names = F)
 
-vars <- colnames(shortfallDF)
-vars <- vars[grep("shortfall", vars)]
-# 
-riskTol <- paste0(as.numeric(gsub("[^0-9]","", vars)), "%")
-df <- shortfallDF
-## reformating in tall form
-require(reshape2)
-df <- melt(shortfallDF, id.vars = c("scenario", "mgmt", "year"),
-            measure.vars = vars,
-           variable.name = "tolerance")
-
-
-df$tolerance <- as.numeric(gsub("[^0-9]", "",  df$tolerance))
-df$tolerance <- paste0(df$tolerance, "%")
-df$tolerance <- factor(df$tolerance, levels = c("5%", "10%", "25%", "50%", "75%"))
-
-
-m <- ggplot(df, aes(x = year + 2015,
-                    y = 100 * value,
-                    linetype = tolerance,
-                    colour = mgmt)) +
-    facet_grid(~ scenario) +
-    geom_line(size = 0.5)
-    
-
-png(filename= paste0("harvestShortfall.png"),
-    width = 8, height = 6, units = "in", res = 600, pointsize=10)
-options(scipen=999)
-
-print(m + theme_dark() +
-          
-          theme(#legend.position="top", legend.direction="horizontal",
-                legend.title = element_text(size = rel(0.85)),
-                title = element_text(size = rel(0.85)),
-                #plot.subtitle = element_text(size = rel(1)),
-                plot.caption = element_text(size = rel(0.65))) +
-          
-          labs(title = "Probability of timber supply shortfall",
-               x = "",
-               y = "Prob. of shorfall (%)\n"))
-
-
-dev.off()
 
 
 
 
 
 
+
+
+
+
+
+for(v in c("harv", "varReten", "salv", "plantPostFire", "plantPostSalv", "plantPostSalvSp")) {
+    if(v == "harv") {
+        df <- summaryHarvest %>%
+            mutate(harv = ifelse(simID %in% simInfo$simID[which(simInfo$mgmt != "No logging")],
+                                 "Harvest", "No harvest"))
+        m <- ggplot(df, aes(x = year + 2015,
+                            colour = harv))
+        
+    }
+}
 

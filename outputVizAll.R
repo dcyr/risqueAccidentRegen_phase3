@@ -3,23 +3,32 @@
 ##### Visualizing outputs
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
 # setwd(paste(home, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3/", sep ="/"))
-setwd("D:/test/risqueAccidentRegen_phase3")
-
 ####################################################################################################
-scenario <- c("baseline_newPlantationRules", "baseline_newFireImpl")##c("baseline", "RCP85")# 
-initYear <- 2015
-
-simInfo <- strsplit(scenario, "_")
-fr <- as.character(lapply(simInfo, function(x) x[[1]]))
-mgmt <- as.character(lapply(simInfo, function(x) x[[2]]))
-rm(simInfo)
-
 ####################################################################################################
 sourceDir <- path.expand("~")
 sourceDir <- gsub("\\\\", "/", sourceDir) # necessary on some Windows machine
 sourceDir <- gsub("/Documents", "", sourceDir) # necessary on my Windows machine
 sourceDir <- paste(sourceDir, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3", sep ="/")
+setwd(sourceDir)
 ####################################################################################################
+require(readxl)
+simInfo <- read_excel("./docs/scenTable.xlsx", sheet = 1)
+
+simInfo <- list(simID = simInfo$id,
+                simDir =  paste0("sim_", simInfo$id),
+                fire = simInfo$fireScenario,
+                mgmt = simInfo$mgmtScenario,
+                ctDyn = ifelse(simInfo$plantPostFireSp == "PG" |
+                                   simInfo$plantPostSalvSp == "PG" , T, F),
+                initYear = 2015,
+                clearcutting =  as.logical(simInfo$clearcut),
+                varReten =  as.logical(simInfo$varReten),
+                salv =  as.logical(simInfo$salv),
+                plantPostFire = as.logical(simInfo$plantPostFire),
+                plantPostSalv =  as.logical(simInfo$plantPostSalv),
+                plantPostFireSp = simInfo$plantPostFireSp)
+
+setwd("D:/test/risqueAccidentRegen_phase3")
 ####################################################################################################
 wwd <- paste(getwd(), Sys.Date(), sep = "/")
 dir.create(wwd)

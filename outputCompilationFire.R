@@ -14,12 +14,14 @@ rm(list = ls()[-which(ls() %in% c("sourceDir", "simInfo", "clusterN"))])
 # setwd(wwd)
 
 
+
+
 #################
 require(raster)
 require(dplyr)
     ####################################################################
 for(s in 1:length(simInfo$simID)) {
-    
+
     simDir <- simInfo$simDir[s]
     fr <- simInfo$fire[s]
     mgmt <- simInfo$mgmt[s]
@@ -27,6 +29,10 @@ for(s in 1:length(simInfo$simID)) {
     
     studyArea <- raster(paste0("../", simDir, "/studyArea.tif"))
     fireZones <- raster(paste0("../", simDir, "/fireZones.tif"))
+    
+    ### copy fire regime.csv
+    file.copy(paste0("../", simDir, "/fireRegime.csv"),
+              paste0("fireRegime_", simID, ".csv"))
     
     ## focusing on fireZones in studyArea
     z <- which(zonal(studyArea, fireZones, sum)[,"value"]>1)

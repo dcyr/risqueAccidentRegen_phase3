@@ -2,7 +2,7 @@
 ###################################################################################################
 ##### Visualizing fire simulations
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario", "clusterN", "fr", "mgmt", "initYear"))])
+rm(list = ls()[-which(ls() %in% c("sourceDir", "simInfo"))])
 # setwd("D:/regenFailureRiskAssessmentData_phase2/2018-10-23")
 # wwd <- paste(getwd(), Sys.Date(), sep = "/")
 # dir.create(wwd)
@@ -22,66 +22,75 @@ require(ggplot2)
 
 #############################################################
 #############################################################
-output <- list()
-fireRegime <- list()
-for (s in seq_along(scenario)) {
-    scen <- scenario[s]
+output <- fireRegime <- list()
+for (s in seq_along(simInfo$simID)) {
+    
+    simID <- simInfo$simID[s]
+    fr <- simInfo$fire[s]
+    mgmt <- simInfo$mgmt[s]
+    initYear <- simInfo$initYear
+    
     ### fetching outputs
-    output[[scenario[s]]] <- get(load(paste0(paste0("../", "outputCompiled/outputCompiledFire_", scenario[s], ".RData"))))
+    output[[s]] <- get(load(paste0(paste0("../", "outputCompiled/outputCompiledFire_", simID, ".RData"))))
     
     ## fetching fire regimes
-    x <- read.csv(paste0("../", scenario[s], "/fireRegime.csv"))
+    
+    x <- read.csv(paste0("../outputCompiled/fireRegime_", simID, ".csv"))
     x <- x %>%
         distinct(scenario, period, fireCycle) %>%
-        filter(scenario == fr[s])
+        filter(scenario %in% c(fr, tolower(fr),
+                               gsub("\\.| ", "", fr)))
+    x[,"scenario"] <- as.character(x$scenario)
+    
+    ## cleaning up...
+    x[which(x$scenario == "baseline"), "scenario"] <- "Baseline"
+    x[which(x$scenario == "RCP85"), "scenario"] <- "RCP 8.5"
+    
     midPoint <- strsplit(as.character(x$period), "-")
     x[, "year"] <- round(as.numeric(lapply(midPoint, function(x) mean(as.numeric(x)))) - initYear)
     x <- x %>% 
         dplyr::select(scenario, fireCycle, year)
-    x[, "mgmt"] <- mgmt[s]
+    x[, "mgmt"] <- mgmt
     ### add plateau if necessary
     x <- rbind(x,
                data.frame(year = seq(from = max(x$year),
                                      to = max(output[[s]]$year),
                                      by = 5),
                           fireCycle = x[which.max(x$year), "fireCycle"],
-                          scenario = fr[s],
-                          mgmt = mgmt[s]))
+                          scenario = fr,
+                          mgmt = mgmt))
     
     x <- distinct(x)
-    fireRegime[[scenario[s]]] <- x
+    fireRegime[[simID]] <- x
     
 }
 output <- do.call("rbind", output)
 fireRegime <- do.call("rbind", fireRegime)
-nSims <- length(unique(output$replicate))
+nSims <- output %>% 
+    group_by(fireScenario, year) %>%
+    summarize(n = n()) %>%
+    distinct(fireScenario, n) %>%
+    as.data.frame()
 
 #################################################################################
 #################################################################################
 ####### figure for baseline scenario (temporally constant, spatially heterogenous)
 ##########################################################################
 require(dplyr)
-## summarizing fire regimes
-
-
-# outputSummary <- outputCompiled %>%
-#     #filter(scenario == scenario) %>%
-#     
-#     arrange(Zone_LN, replicate, year)
-
 
 ## create data frame with annual data
 df <- output %>%
     mutate(propAAB = areaBurned_ha/areaZoneTotal_ha) %>%
-    dplyr::select(scenario, mgmt, replicate, year, areaBurned_ha, areaZoneTotal_ha, propAAB)
+    dplyr::select(fireScenario, mgmtScenario,
+                  replicate, year, areaBurned_ha, areaZoneTotal_ha, propAAB)
 write.csv(df, file = paste0("fireSummary.csv"), row.names = F)
 
 ## global summary
 globalSummary <- df %>%
-    group_by(scenario, mgmt, replicate) %>%
+    group_by(fireScenario, mgmtScenario, replicate) %>%
     summarize(fireCycle = round((1/mean(propAAB))),
               propAAB = mean(propAAB)) %>%
-    arrange(scenario, replicate)
+    arrange(fireScenario, replicate)
 
 ## global summary
 span = 0.5
@@ -93,7 +102,7 @@ f <- function(x, y, span) {
 
 
 annualSummary <- df %>%
-    group_by(scenario, mgmt, year) %>%
+    group_by(fireScenario, year) %>%
     summarize(propAAB_mean = mean(propAAB),
               propAAB_p10 = quantile(propAAB, 0.05),
               propAAB_p25 = quantile(propAAB, 0.25),
@@ -111,10 +120,11 @@ fireRegime <- fireRegime %>%
     group_by(scenario, mgmt) %>%
     mutate(target = f(x = year,
                       y = fireCycle,
-                      span = span))
+                      span = span),
+           fireScenario = scenario)
 
 fcSummary <- globalSummary %>%
-    group_by(scenario, mgmt) %>%
+    group_by(fireScenario) %>%
     summarize(FC_median = median(fireCycle),
               FC_mean = 1/mean(propAAB),
               FP_p10 = quantile(fireCycle, 0.1),
@@ -129,12 +139,12 @@ fcSummary <- globalSummary %>%
 
 # cols <- c(baseline = "orange",
 #           RCP85 = "darkred")
-cols <- c(newFireImpl = "orange",
-          newPlantationRules = "darkred")
+cols <- c(Baseline = "lightblue",
+          "RCP 8.5" = "darkred")
 
-p <- ggplot(annualSummary, aes(x = year + 2015, group = mgmt,
-                               fill = mgmt,
-                               colour = mgmt)) +
+p <- ggplot(annualSummary, aes(x = year + 2015, group = fireScenario,
+                               fill = fireScenario,
+                               colour = fireScenario)) +
     geom_line(aes(y = 100*meanS),
               size = 1) +
     geom_ribbon(aes(y = NULL, colour = NULL,
@@ -155,19 +165,20 @@ options(scipen=999)
 print(p + theme_dark() +
           
           theme(#legend.position="top", legend.direction="horizontal",
-              legend.title = element_text(size = rel(0.85)),
+              legend.title = element_blank(),#element_text(size = rel(0.85)),
               title = element_text(size = rel(0.85)),
               #plot.subtitle = element_text(size = rel(1)),
               plot.caption = element_text(size = rel(0.65))) +
           
-          labs(title = paste0("Simulated fire regimes - ", nSims, " simulations per scenario"),
-               subtitle = paste0("Full lines and ribbons represent averages and 25th and 75th percentiles\n",
-                                 "Dotted lines represent 90th percentiles (extreme fire years)\n",
-                                 "Dashed lines represent targetted fire regimes"),
-               #"Min vieilles forÃªts (>=100 ans): 14%\n",
-               #"Max régén. (< 20 ans): 35%"),
+          labs(title = paste0("Simulated fire regimes"),
+               #subtitle = paste0(),
                x = "",
-               y = "Percent area burned (%)\n"))
+               y = "Percent area burned (%)\n",
+               caption = paste0("Full lines and ribbons represent averages and 25th and 75th percentiles\n",
+                                "Dotted lines represent 90th percentiles (extreme fire years)\n",
+                                "Dashed lines represent targetted fire regimes\n\n",
+                                paste0(nSims[1,1], ": ", nSims[1,2], " simulations"), "\n",
+                                paste0(nSims[2,1], ": ", nSims[2,2], " simulations"))))
 
 dev.off()
 
