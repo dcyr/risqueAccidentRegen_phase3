@@ -65,6 +65,7 @@ for (s in seq_along(simInfo$simID)) {
     
 }
 output <- do.call("rbind", output)
+write.csv(output, file = "outputCompiledFire.csv", row.names = F)
 fireRegime <- do.call("rbind", fireRegime)
 nSims <- output %>% 
     group_by(fireScenario, year) %>%

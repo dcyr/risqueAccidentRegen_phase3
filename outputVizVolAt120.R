@@ -24,7 +24,7 @@ output[,"plantPostFire"] <- simInfo$plantPostFire[match(output$simID, simInfo$si
 output[,"plantPostSalv"] <- simInfo$plantPostSalv[match(output$simID, simInfo$simID)]
 output[,"plantPostFireSp"] <- simInfo$plantPostFireSp[match(output$simID, simInfo$simID)]
 
-
+write.csv(output, file = "outputCompiledVolAt120.csv", row.names = F)
 #lvls <- levels(outputCompiled$volAt120Cls)
 #outputCompiled[outputCompiled$volAt120Cls == "N/A", "volAt120Cls"] <- lvls[1]
 
@@ -49,10 +49,10 @@ require(ggplot2)
 colList <- list("Harvesting Regime" = c("No harvest" = "seagreen",
                                         "Clearcutting" = "orangered4",
                                         "Variable retention harvest" = "dodgerblue4"),
-                "Post-Fire Intervention" = c("No post-fire interventions, no harvest" = "darkslategrey",
-                                             "No post-fire interventions, with harvest" = "peru",
-                                             "Salvage logging, with no interventions on non-salvaged sites" = "firebrick2",
-                                             "Planting on all unsalvaged low regen. burnt sites" = "firebrick4"),
+                "Post-Fire Intervention" = c("No post-fire interventions, no harvest" = "seagreen",
+                                             "No post-fire interventions, with harvest" = "dodgerblue4",
+                                             "Post-fire planting on all low regen. burnt sites\n(without salv. logging)" = "orangered2",
+                                             "Post-fire planting on all low regen. burnt sites\n(with salv. logging)" = "orangered4"),
                 "Planted species" = c("Return to pre-fire composition" = "darkslategrey",
                                       "Jack Pine" = "peru"))
 
@@ -75,28 +75,37 @@ for (i in seq_along(colList)) {
     }
     if(i == 2) {
         plotDf <- df %>%
-            mutate(plotLvl = ifelse(plantPostFire, labels[4],
-                                    ifelse(salv, labels[3],
-                                           ifelse(varReten | clearcutting, labels[2],
-                                                  labels[1]))),
+            mutate(plotLvl = ifelse(salv, labels[4],
+                                    ifelse(!salv & plantPostFire, labels[3],
+                                           ifelse((varReten | clearcutting) & !plantPostFire, labels[2],
+                                                  ifelse(!(varReten | clearcutting), labels[1], NA)))),
                    plotLvl = factor(plotLvl, levels = labels))
                                     
               
                                            
-            table(foo)
+        #summary(plotDf$plotLvl)
+    }
+    
+    if(i == 3) {
+        plotDf <- df %>%
+            mutate(plotLvl = ifelse(plantPostFireSp == "PG", labels[2],
+                                    ifelse(plantPostFireSp == "same", labels[1], NA)),
+                   plotLvl = factor(plotLvl, levels = labels)) %>%
+            filter(!is.na(plotLvl))
+        
+        
+        
+        
+        summary(plotDf$plotLvl)
     }
     
     
-    foo = ifelse(df$salv & !df$plantPostSalv & !df$plantPostFire,  "Salvage logging with no plantation",
-                     ifelse(df$salv & df$plantPostSalv & !df$plantPostFire, "Salvage logging with plantation",
-                            ifelse(df$plantPostFire, "Post-fire plant. on all low regen.burnt sites", NA)))
-    
-    p <- ggplot(data = plotDf, aes(x = yearInit + year, y = p50VolAt120Area_ha,
+   p <- ggplot(data = plotDf, aes(x = yearInit + year, y = p50VolAt120Area_ha,
                                colour = plotLvl, linetype = fireScenario,
                                group = simID)) +
         geom_line(size = 0.75, alpha = 0.85) +
         facet_wrap(~ volAt120Cls, ncol = length(levels(plotDf$volAt120Cls))) +
-        labs(title = "Impact of harvesting regimes",
+        labs(title = "",
              x = "",
              y = "Area (ha)") +
         scale_colour_manual(plotName,
@@ -117,14 +126,7 @@ for (i in seq_along(colList)) {
     
     dev.off()
 }
-    
-    
-    
-    
-    
-}
-
-
+  
 
 
 

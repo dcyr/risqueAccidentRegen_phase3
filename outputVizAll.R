@@ -6,6 +6,9 @@ home <- path.expand("~")
 home <- gsub("\\\\", "/", home) # necessary on some Windows machine
 home <- gsub("/Documents", "", home) # necessary on my Windows machine
 setwd(paste(home, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3/", sep ="/"))
+
+
+rawOutputDir <- "D:/test/risqueAccidentRegen_phase3/" ## necessary for some scripts (ex harvest, fire)
 ####################################################################################################
 ####################################################################################################
 wwd <- paste(getwd(), Sys.Date(), sep = "/")
@@ -14,6 +17,8 @@ setwd(wwd)
 ####################################################################################################
 require(readxl)
 simInfo <- read_excel("../docs/scenTable.xlsx", sheet = 1)
+
+simInfo <- simInfo[1:12,]
 
 simInfo <- list(simID = simInfo$id,
                 simDir =  paste0("sim_", simInfo$id),
@@ -37,8 +42,8 @@ simInfo <- list(simID = simInfo$id,
 ####################################################################################################
 ####################################################################################################
 ## use eval() and parse() instead of source() to deal with special character under Windows.
-# eval(parse(paste(sourceDir, "outputVizFire.R", sep = "/"), encoding = 'UTF-8'))
-# eval(parse(paste(sourceDir, "outputVizHarvest.R", sep = "/"), encoding = 'UTF-8'))
+eval(parse(paste(sourceDir, "outputVizFire.R", sep = "/"), encoding = 'UTF-8'))
+eval(parse(paste(sourceDir, "outputVizHarvest.R", sep = "/"), encoding = 'UTF-8'))
 eval(parse(paste(sourceDir, "outputVizVolAt120.R", sep = "/"), encoding = 'UTF-8'))
 # eval(parse(paste(sourceDir, "outputVizAge.R", sep = "/"), encoding = 'UTF-8'))
 

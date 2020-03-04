@@ -2,7 +2,7 @@
 ###################################################################################################
 ##### Visualizing harvest simulations
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-rm(list = ls()[-which(ls() %in% c("sourceDir", "simInfo"))])
+rm(list = ls()[-which(ls() %in% c("sourceDir", "simInfo", "rawOutputDir"))])
 #################
 require(raster)
 require(ggplot2)
@@ -13,7 +13,7 @@ harvTarget <- output <- list()
 for (s in seq_along(simInfo$simID)) {
     
     simID <- simInfo$simID[s]
-    simDir <- simInfo$simDir[s]
+    simDir <- paste0(rawOutputDir, simInfo$simDir[s])
     fr <- simInfo$fire[s]
     mgmt <- simInfo$mgmt[s]
     initYear <- simInfo$initYear
@@ -21,18 +21,18 @@ for (s in seq_along(simInfo$simID)) {
     ####################################################################
     ####################################################################
     ######
-    studyArea <- raster(paste0("../", simDir, "/studyArea.tif"))
+    studyArea <- raster(paste0(simDir, "/studyArea.tif"))
     convFactor <- prod(res(studyArea))/10000### to convert to hectares
-    uaf <- raster(paste0("../", simDir, "/uaf.tif"))
-    uaf_RAT <- read.csv(paste0("../", simDir, "/uaf_RAT.csv"))
+    uaf <- raster(paste0(simDir, "/uaf.tif"))
+    uaf_RAT <- read.csv(paste0(simDir, "/uaf_RAT.csv"))
     
-    subZones <- raster(paste0("../", simDir, "/subZones.tif"))
-    subZones_RAT <- read.csv(paste0("../", simDir, "/subZones_RAT.csv"))
+    subZones <- raster(paste0(simDir, "/subZones.tif"))
+    subZones_RAT <- read.csv(paste0(simDir, "/subZones_RAT.csv"))
     
-    coverTypes <- raster(paste0("../", simDir, "/coverTypes.tif"))
-    coverTypes_RAT <- read.csv(paste0("../", simDir, "/coverTypes_RAT.csv"))
+    coverTypes <- raster(paste0(simDir, "/coverTypes.tif"))
+    coverTypes_RAT <- read.csv(paste0(simDir, "/coverTypes_RAT.csv"))
     
-    plan <- get(load(paste0("../", simDir, "/managementPlan.RData")))[["baseline"]]
+    plan <- get(load(paste0(simDir, "/managementPlan.RData")))[["baseline"]]
     
     ## eligible to harvest
     harvEligible <- uaf %in% plan$uaf &
@@ -104,7 +104,7 @@ summaryHarvest <- output %>%
            propTarget = harvAreaTotal_ha / harvTargetArea_ha,
            salvProp = areaSalvagedTotal_ha / harvAreaTotal_ha) 
     
-write.csv(summaryHarvest, paste0("harvestSummary.csv"), row.names = F)
+write.csv(summaryHarvest, paste0("outputCompiledHarvest.csv"), row.names = F)
 
 
 summaryHarvest <- summaryHarvest %>%
