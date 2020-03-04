@@ -95,8 +95,8 @@ output[,"plantPostFire"] <- simInfo$plantPostFire[match(output$simID, simInfo$si
 output[,"plantPostSalv"] <- simInfo$plantPostSalv[match(output$simID, simInfo$simID)]
 output[,"plantPostSalvSp"] <- simInfo$plantPostSalvSp[match(output$simID, simInfo$simID)]
 
-###
-
+### rounding some volumes
+output[,"volSalvagedTotal_cubMeter"] <- round(output[,"volSalvagedTotal_cubMeter"], 1)
 
 summaryHarvest <- output %>%
     mutate(harvAreaTotal_ha = areaHarvestedTotal_ha + areaSalvagedTotal_ha,

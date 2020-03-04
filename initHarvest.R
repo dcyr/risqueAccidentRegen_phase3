@@ -14,7 +14,7 @@ names(spMaturity) <- 1:length(spMaturity)
 
 ## zonal grouping, harvest rates and age structure targets
 targetAgeGrouping <- c("uaf", "subZones") # factors
-targetHarvestLevels <- list(SEPM = c(0))# 0.0062
+targetHarvestLevels <- list(SEPM = c(0.0062))# 0.0062
 regenMaxProp <- 1#.35 # max proportion of regenerating stands
 regenMaxAge <- 20 #less than x years since last disturbance
 oldMinProp <- 0#.14 # min proportion of old stands
@@ -22,24 +22,24 @@ oldMinAge <- 100
 
 ## Access limitation
 limitedAccess <- c(harv = F,
-                   salv = F,
-                   plant = F,
+                   salv = T,
+                   plant = T,
                    reten = F)
 
 ## salvage logging parameters
-salvageLog <- F
+salvageLog <- T
 salvageTargetStandProp <- list(SEPM = c(.70)) ## (baseline: .70) max proportion of commercial volume that is salvaged
 salvageWoodPropLost <- list(SEPM = c(.75)) ## proportion burned wood that is salvageable
 salvageEligibility <- list(SEPM = c(70)) ## in m3/ha, minimum merchanteable volume in order to be eligible to salvage logging
 
 ## retention cutting
-retentionCut <- F
+retentionCut <- T
 retentionCutTarget <- 30 ## targeted min volAt120 years old
 
 ## plantation
 plantation <- c(postFire = F,
                postHarv = F,
-               postSalv = F,
+               postSalv = T,
                postReten = F)
 plantationSp <- c(postFire = "same",## ('"same", or any of the other covertype)
                   postHarv = "same",
