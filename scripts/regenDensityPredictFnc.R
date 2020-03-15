@@ -94,7 +94,7 @@ seedlingFnc <- function(sp, Ac, G, iqs, seedCoef, tCoef, salvaged = F) {
                      g = g[match(.sp, names(.seedCoef))],
                      td = td[match(.sp, names(.seedCoef))])
 
-    ##
+    ## correcting absission parameter when salvage logging
     df[salvaged, "td"] <- ifelse(.sp[salvaged] == "EN", 0.40, 0.81)
     
     ### seed production (number of seeds per sq-meter; Greene and Johnson 1998)
@@ -107,7 +107,7 @@ seedlingFnc <- function(sp, Ac, G, iqs, seedCoef, tCoef, salvaged = F) {
                                            (1-exp(-x["fh"] * x["m"]^x["d"])))) ## bad seedbeds
 
     
-    ### seedling density after 3 years
+    ### seedling density after 6 years
     x <- apply(df, 1, function(x) x["seedsPerSqM"] * x["surv"])
    
     ### correction for the proportion of trees bearing cones depending of stand age

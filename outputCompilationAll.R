@@ -18,6 +18,7 @@ setwd(sourceDir)
 ####################################################################################################
 require(readxl)
 simInfo <- read_excel("./docs/scenTable.xlsx", sheet = 1)
+simInfo <- simInfo[1:12,]
 
 simInfo <- list(simID = simInfo$id,
                 simDir =  paste0("sim_", simInfo$id),
@@ -32,16 +33,12 @@ wwd <- paste(getwd(), Sys.Date(), sep = "/")
 dir.create(wwd)
 setwd(wwd)
 
-# simInfo <- strsplit(scenario, "_")
-# fr <- as.character(lapply(simInfo, function(x) x[[1]]))
-# mgmt <- as.character(lapply(simInfo, function(x) x[[2]]))
-
-
 require(doSNOW)
 require(parallel)
 require(foreach)
 # clusterN <- 2
 clusterN <-  max(1, floor(0.75*detectCores()))  ### choose number of nodes to add to cluster.
+clusterN <- 8
 
 ## use eval() and parse() instead of source() to deal with special character under Windows.
 # eval(parse(paste(sourceDir, "outputCompilationFire.R", sep = "/"), encoding = 'UTF-8'))

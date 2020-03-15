@@ -48,7 +48,7 @@ for(s in 1:length(simInfo$simID)) {
     cl = makeCluster(clusterN, outfile = "") ##
     registerDoSNOW(cl)
     #######
-    outputCompiled <- foreach(i =  seq_along(x), .combine = "rbind") %dopar% {#
+    outputCompiled <- foreach(i = seq_along(x), .combine = "rbind") %dopar% {#seq_along(x)
         
         require(raster)
         require(reshape2)
@@ -96,12 +96,19 @@ for(s in 1:length(simInfo$simID)) {
             volAt120[index,j-1] <- 0
             
         }
+        ### computing landscape averages
+        volAt120_mean <- apply(volAt120, 2, mean, na.rm = T)
+        volAt120_mean <- data.frame(simID = simID,
+                                    year = as.numeric(gsub("volAt120_", "", names(volAt120_mean))),
+                                    volAt120_totalLandscapeAverage = round(volAt120_mean, 2))
+        
+        
         
         volAt120Cls <- apply(volAt120, 2, function(x) cut(x, include.lowest = T, right = F, breaks=c(0, 30, 50, 80, 999)))
        
         out <- list()
         for (sp in c("EN", "PG")) {
-            
+        
             ctID <- coverTypes_RAT[match(sp, coverTypes_RAT$value), "ID"]
             
             for (j in 1:ncol(volAt120Cls)) {
@@ -137,7 +144,8 @@ for(s in 1:length(simInfo$simID)) {
                    fireScenario = fr,
                    mgmtScenario = mgmt) %>%
             select(simID, fireScenario, mgmtScenario, replicate, year, coverType,  volAt120Cls, area_ha) %>%
-            arrange(simID, fireScenario, mgmtScenario, replicate, year)
+            arrange(simID, fireScenario, mgmtScenario, replicate, year) %>%
+            merge(volAt120_mean)
         
         print(paste(simID, "volAt120", r))
         return(out)
@@ -146,3 +154,27 @@ for(s in 1:length(simInfo$simID)) {
     stopCluster(cl)
     save(outputCompiled, file = paste0("outputCompiledVolAt120_", simID, ".RData"))
 }
+
+nrow(out_02)
+nrow(out_04)
+nrow(out_06)
+
+
+foo_02 <- out_02 %>%
+    filter(year == 100)
+foo_04 <- out_04 %>%
+    filter(year == 100)
+foo_06 <- out_06 %>%
+    filter(year == 100)
+
+summary(foo_02) 
+summary(foo_04) 
+summary(foo_06) 
+
+c(mean(foo_02$volAt120_totalLandscapeAverage), quantile(foo_02$volAt120_totalLandscapeAverage, c(0.01, .1, .25, .5, .75, 0.9, 0.95, .99)))
+c(mean(foo_04$volAt120_totalLandscapeAverage), quantile(foo_04$volAt120_totalLandscapeAverage, c(0.01, .1, .25, .5, .75, 0.9, 0.95, .99)))
+c(mean(foo_06$volAt120_totalLandscapeAverage), quantile(foo_06$volAt120_totalLandscapeAverage, c(0.01, .1, .25, .5, .75, 0.9, 0.95, .99)))
+out_02 %>%
+    group_by(year, fireScenario, mgmtScenario, coverType, volAt120Cls) %>%
+    summarise(count = n()) %>%
+    as.data.frame()

@@ -23,7 +23,7 @@ oldMinAge <- 100
 ## Access limitation
 limitedAccess <- c(harv = F,
                    salv = T,
-                   plant = T,
+                   plant = F,
                    reten = F)
 
 ## salvage logging parameters
@@ -37,7 +37,7 @@ retentionCut <- T
 retentionCutTarget <- 30 ## targeted min volAt120 years old
 
 ## plantation
-plantation <- c(postFire = F,
+plantation <- c(postFire = T,
                postHarv = F,
                postSalv = T,
                postReten = F)

@@ -261,7 +261,7 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     }
   }
 
-  for (y in 1:simDuration) {
+  for (y in 1:5) { #simDuration
     ####################### create rasters #####################################
     
     if(exists("harv")) {
@@ -405,6 +405,13 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     seedlingDens <- seedlingFnc(sp = sp, Ac = AcEffective, G = g, iqs = iqs,
                                 seedCoef = seedCoef, tCoef = tCoef,
                                 salvaged = salvaged)
+    # seedlingDensT <- seedlingFnc(sp = sp, Ac = AcEffective, G = g, iqs = iqs,
+    #                             seedCoef = seedCoef, tCoef = tCoef,
+    #                             salvaged = T)
+    # seedlingDensF <- seedlingFnc(sp = sp, Ac = AcEffective, G = g, iqs = iqs,
+    #                             seedCoef = seedCoef, tCoef = tCoef,
+    #                             salvaged = F)
+    # 
     ###################### post-salvage plantation (if applicable) #############
     if(plan$salvageLog) {
       if(plan$plantation["postSalv"]) {
@@ -474,13 +481,14 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     } else {
       v120 <- volAt120[[y-1]]
     }
+
     
-    v120[index] <- round(VFnc(sp = sp, Ac = Ac,
-                                iqs = iqs, rho100 = x,
-                                rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef,
-                                DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
-                                scenesCoef = NULL, withSenescence = F),
-                           1)
+    v120[index] <- round(VFnc(sp = sp, Ac = 120 - (a - Ac),
+                              iqs = iqs, rho100 = x,
+                              rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef,
+                              DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
+                              scenesCoef = NULL, withSenescence = F),
+                         1)
 
 
     ### creating new raster layer
@@ -629,7 +637,7 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
                                 nrow = length(g))
           
           ### vol at 120 if retention portion burned the same year
-          v120 <- matrix(apply(rho100At120, 2, function(x) VFnc(sp = sp, Ac = Ac,
+          v120 <- matrix(apply(rho100At120, 2, function(x) VFnc(sp = sp, Ac = 120 - (a - Ac),
                                                                 iqs = iqs, rho100 = x,
                                                                 rho100Coef = rho100Coef, HdCoef = HdCoef, GCoef = GCoef,
                                                                 DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
