@@ -23,17 +23,17 @@ oldMinAge <- 100
 ## Access limitation
 limitedAccess <- c(harv = F,
                    salv = T,
-                   plant = F,
+                   plant = T,
                    reten = F)
 
 ## salvage logging parameters
-salvageLog <- T
+salvageLog <- F
 salvageTargetStandProp <- list(SEPM = c(.70)) ## (baseline: .70) max proportion of commercial volume that is salvaged
 salvageWoodPropLost <- list(SEPM = c(.75)) ## proportion burned wood that is salvageable
 salvageEligibility <- list(SEPM = c(70)) ## in m3/ha, minimum merchanteable volume in order to be eligible to salvage logging
 
 ## retention cutting
-retentionCut <- T
+retentionCut <- F
 retentionCutTarget <- 30 ## targeted min volAt120 years old
 
 ## plantation

@@ -19,7 +19,7 @@ setwd(wwd)
 ################################################################################
 ################################################################################
 nRep <- 100
-simDuration <- 100
+simDuration <- 150
 simStartYear <- 2015
 scen <- "baseline" #c("baseline", "RCP85")
 noUAF <- T 
@@ -261,7 +261,7 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
     }
   }
 
-  for (y in 1:5) { #simDuration
+  for (y in 1:simDuration) { #simDuration
     ####################### create rasters #####################################
     
     if(exists("harv")) {
@@ -297,7 +297,8 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
                  fireSizeDist = fireSizeDist,
                  # fireSizeFit = fireSizeFit,
                  # fireSizeMax = fireSizeMax,
-                 id = simID)
+                 id = simID,
+                 fireNCorrFactor = fireNCorrFactor)
     
     f <- f$tsf == 0
     f[!f] <- NA
@@ -429,6 +430,8 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
            length(indexSalvPlant)>0) {
           ct_sp <- coverTypes_RAT[match(plan$plantationSp[["postSalv"]], coverTypes_RAT[,"value"]), "ID"]
           ct[index[indexSalvPlant]] <- ct_sp
+          # update iqs
+          IQS_POT[index[indexSalvPlant]] <- iqs[indexSalvPlant] <- IQS_PG[index[indexSalvPlant]]
         }
         if(verbose) {
           print(paste(length(indexSalvPlant), "cell(s) planted (post-salvage)"))
@@ -452,6 +455,8 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
          length(indexFirePlant)>0) {
         ct_sp <- coverTypes_RAT[match(plan$plantationSp[["postFire"]], coverTypes_RAT[,"value"]), "ID"]
         ct[index[indexFirePlant]] <- ct_sp
+        # update iqs
+        IQS_POT[index[indexFirePlant]] <- iqs[indexFirePlant] <- IQS_PG[index[indexFirePlant]]
       }
       if(verbose) {
         print(paste(length(indexFirePlant), "cell(s) planted (post-fire)"))

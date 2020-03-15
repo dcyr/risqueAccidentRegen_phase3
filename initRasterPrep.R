@@ -375,6 +375,55 @@ hli[is.na(coverTypes)] <- prodPot[is.na(coverTypes)] <- preTot[is.na(coverTypes)
     dens[is.na(coverTypes)] <- NA
 
 
+
+##############################################################
+##############################################################
+### Knn - generate IQS_pot for Jack Pine
+##############################################################
+### breaking relative density into a factor for knn
+
+### train
+IQS_PG <- IQS_POT
+IQS_PG[] <- NA
+for (sp in c("PG", "EN")) {
+  index <- which(values(coverTypes) == coverTypes_RAT[coverTypes_RAT$value == sp, "ID"])
+  
+  surfDepVals <- surfDep_RAT[match(values(surfDep)[index], surfDep_RAT$ID), "value"]
+  drainVals <- ifelse(drain[index] %in% drainageCodes[[1]], names(drainageCodes)[[1]],
+                      ifelse(drain[index] %in% drainageCodes[[2]], names(drainageCodes)[[2]], NA))
+  
+  
+  if(sp == "PG") {
+    iqs <- IQS_PG[index] <- IQS_POT[index]
+    train <- data.frame(surfDepVals,
+                        drainVals,
+                        iqs) %>%
+      filter(iqs > 0)
+    train <- train[complete.cases(train),]
+
+  }
+  if(sp == "EN") {
+   
+    test <- data.frame(surfDepVals,
+                        drainVals) 
+    newVals <- rep(NA, length = nrow(test))
+    for(sd in unique(test$surfDepVals)){
+      for(dr in unique(test$drainVals)) {
+        indexTest <- which(test$surfDepVals == sd &
+                             test$drainVals == dr)
+        indexTrain <- which(train$surfDepVals == sd &
+                              train$drainVals == dr)
+        iqsTrain <- train[indexTrain, "iqs"]
+        iqsTest <- sample(iqsTrain, size = length(indexTest), replace  = T)
+        newVals[indexTest] <- iqsTest
+      }
+    }
+    IQS_PG[index] <- newVals
+  }
+}
+
+
+
 ## study area
 writeRaster(studyArea, file = "studyArea.tif", overwrite = T)
 save(studyAreaP, file = "studyAreaP.RData")
@@ -428,7 +477,8 @@ stored <- append(stored, c("surfDep", "surfDep_RAT"))
 # writeRaster(ericaceous, file = "ericaceous.tif", overwrite = T)
 # stored <- append(stored, "ericaceous")
 writeRaster(IQS_POT, file = "iqs.tif", overwrite = T)
-stored <- append(stored, "IQS_POT")
+writeRaster(IQS_PG, file = "iqs_PG.tif", overwrite = T)
+stored <- append(stored, c("IQS_POT", "IQS_PG"))
 
 
 

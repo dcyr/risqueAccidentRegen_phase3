@@ -13,6 +13,8 @@ df <- fireObs %>%
 fireSizeDist <- round(df$areaTotal_ha)
 fireSizeMean <- round(mean(fireSizeDist))
 
+fireNCorrFactor <- 0.9386
+
 ###parametric fire distribution
 # require(MASS)
 # maxFireSize <- 1.5*max(fireObs$areaTotal_ha) ## 1.5 * max obs => average fc of 104 years in the study area 
@@ -85,7 +87,7 @@ fireRegime<- fireRegime[, c("ID", "Zone_LN", "scenario", "period", "fireCycle")]
 
 write.csv(fireRegime, file = "fireRegime.csv", row.names = F) 
 ##############
-stored <- append(stored, c("fireSizeFit", "fireSizeMax", "fireSizeDist", "fireSizeMean", "fireRegime"))
+stored <- append(stored, c("fireSizeFit", "fireSizeMax", "fireSizeDist", "fireSizeMean", "fireRegime", "fireNCorrFactor"))
 rm(list = ls()[!ls() %in% stored])
 source("../scripts/simFireFnc.R")
 

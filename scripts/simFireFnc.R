@@ -24,7 +24,8 @@ simFire <- function(tsfInit, simDur, yearInit,
                 fireZones, fireRegime,
                 fireSizeFit = NULL, fireSizeMax = NULL, ## either that line of the following
                 fireSizeMean = NULL, fireSizeDist = NULL, ## either that line of the previous one
-                outputTSF = TRUE, outputFire = FALSE, id) {
+                outputTSF = TRUE, outputFire = FALSE, id,
+                fireNCorrFactor) {
     
     require(raster)
     #### converting number of pixels to hectares
@@ -94,7 +95,7 @@ simFire <- function(tsfInit, simDur, yearInit,
     ### Fire sequence (annually)
     nFiresMean <- fAAB * zonal(!is.na(fireZones), fireZones, fun='sum')[,"sum"] * scaleFactor / fireSizeMean
     
-    
+    nFiresMean <- nFiresMean *fireNCorrFactor
     
     ### Generate a yearly sequence of number of fires
 
