@@ -32,7 +32,8 @@ for(s in 1:length(simInfo$simID)) {
     
     ### copy fire regime.csv
     file.copy(paste0("../", simDir, "/fireRegime.csv"),
-              paste0("fireRegime_", simID, ".csv"))
+              paste0("fireRegime_", simID, ".csv"),
+              overwrite = T)
     
     ## focusing on fireZones in studyArea
     z <- which(zonal(studyArea, fireZones, sum)[,"value"]>1)
@@ -89,7 +90,6 @@ for(s in 1:length(simInfo$simID)) {
         
         # s <- scenario[i]
         r <- replicates[i]
-        
         ## fetching outputs
         fire <- get(load(paste(outputFolder, x[i], sep="/")))
         ## focusing on studyArea
@@ -100,19 +100,15 @@ for(s in 1:length(simInfo$simID)) {
         areaBurned <- zonal(fire, fireZones,  "sum")[,-1] * convFactor
         year <- as.numeric(gsub("[^0-9]", "", names(areaBurned)))
         
-        
         ## tidying up data frame
         areaBurned <- data.frame(year, replicate = r,
                                  areaBurned_ha = areaBurned)
-        
         out <- data.frame(simID = simID,
                           fireScenario = fr,
                           mgmtScenario = mgmt,
                           areaBurned)
-        
         print(paste(s, "fire", fr, r))
         return(out)
-        
     }
     
     stopCluster(cl)

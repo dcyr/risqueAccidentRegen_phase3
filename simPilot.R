@@ -21,7 +21,7 @@ setwd(wwd)
 nRep <- 100
 simDuration <- 150
 simStartYear <- 2015
-scen <- "baseline" #c("baseline", "RCP85")
+scen <- "RCP85" #c("baseline", "RCP85")
 noUAF <- T 
 stored <- c("stored", "noUAF", "nRep", "simDuration", "simStartYear", "scen")
 ################################################################################
@@ -765,7 +765,7 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
   }
   if(exists("coverTypesDyn")) {
     print("saving outputCoverTypes_*.RData")
-    save(coverTypesDyn, file = paste0(outputDir, "outputCoverTypes__", simID, ".RData"))
+    save(coverTypesDyn, file = paste0(outputDir, "outputCoverTypes_", simID, ".RData"))
   }
   if(exists("salv")) {
     print("saving outputSalvage_*.RData")

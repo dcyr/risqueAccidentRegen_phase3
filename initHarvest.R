@@ -14,7 +14,7 @@ names(spMaturity) <- 1:length(spMaturity)
 
 ## zonal grouping, harvest rates and age structure targets
 targetAgeGrouping <- c("uaf", "subZones") # factors
-targetHarvestLevels <- list(SEPM = c(0.0062))# 0.0062
+targetHarvestLevels <- list(SEPM = c(0))# 0.0062
 regenMaxProp <- 1#.35 # max proportion of regenerating stands
 regenMaxAge <- 20 #less than x years since last disturbance
 oldMinProp <- 0#.14 # min proportion of old stands
@@ -37,9 +37,9 @@ retentionCut <- F
 retentionCutTarget <- 30 ## targeted min volAt120 years old
 
 ## plantation
-plantation <- c(postFire = T,
+plantation <- c(postFire = F,
                postHarv = F,
-               postSalv = T,
+               postSalv = F,
                postReten = F)
 plantationSp <- c(postFire = "same",## ('"same", or any of the other covertype)
                   postHarv = "same",

@@ -255,7 +255,7 @@ p <- ggplot(x, aes(x = rho, fill = group, colour = group)) +
     facet_wrap(~coverType) +
     scale_colour_manual(values = c(train = "darkorange", test = "lightblue")) +
     scale_fill_manual(values = c(train = "darkorange", test = "lightblue")) +
-    labs(title = "Distribution initiale des indices de densité relative à 100 ans (IDR100)",
+    labs(title = "Distribution initiale des indices de densite relative a 100 ans (IDR100)",
          x = "IDR100")#,
          #y = "IDR100\n") #+
     #coord_flip()

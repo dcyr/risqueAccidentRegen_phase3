@@ -2,12 +2,6 @@
 ###################################################################################################
 # ##### Compiling outputs
 # ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-# rm(list = ls())
-# ################################################################################
-# home <- path.expand("~")
-# home <- gsub("\\\\", "/", home) # necessary on some Windows machine
-# home <- gsub("/Documents", "", home) # necessary on my Windows machine
-# # setwd(paste(home, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3/", sep ="/"))
 ####################################################################################################
 ####################################################################################################
 sourceDir <- path.expand("~")
@@ -26,8 +20,8 @@ simInfo <- list(simID = simInfo$id,
                 mgmt = simInfo$mgmtScenario,
                 ctDyn = ifelse(simInfo$plantPostFireSp == "PG" |
                                    simInfo$plantPostSalvSp == "PG" , T, F))
-
-setwd("D:/test/risqueAccidentRegen_phase3")
+#setwd("~/Data/test/risqueAccidentRegen_phase3/")
+setwd("D:/risqueAccidentRegen_phase3")
 ####################################################################################################
 wwd <- paste(getwd(), Sys.Date(), sep = "/")
 dir.create(wwd)
@@ -38,11 +32,11 @@ require(parallel)
 require(foreach)
 # clusterN <- 2
 clusterN <-  max(1, floor(0.75*detectCores()))  ### choose number of nodes to add to cluster.
-clusterN <- 8
+clusterN <- 4 
 
 ## use eval() and parse() instead of source() to deal with special character under Windows.
-# eval(parse(paste(sourceDir, "outputCompilationFire.R", sep = "/"), encoding = 'UTF-8'))
-# eval(parse(paste(sourceDir, "outputCompilationHarvest.R", sep = "/"), encoding = 'UTF-8'))
-# eval(parse(paste(sourceDir, "outputCompilationTSD.R", sep = "/"), encoding = 'UTF-8'))
+eval(parse(paste(sourceDir, "outputCompilationFire.R", sep = "/"), encoding = 'UTF-8'))
+eval(parse(paste(sourceDir, "outputCompilationHarvest.R", sep = "/"), encoding = 'UTF-8'))
+#eval(parse(paste(sourceDir, "outputCompilationTSD.R", sep = "/"), encoding = 'UTF-8'))
 eval(parse(paste(sourceDir, "outputCompilationVolAt120.R", sep = "/"), encoding = 'UTF-8'))
 #eval(parse(paste(sourceDir, "outputCompilationVolAt120Trans.R", sep = "/"), encoding = 'UTF-8'))
