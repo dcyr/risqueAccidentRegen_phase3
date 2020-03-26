@@ -8,7 +8,7 @@ home <- gsub("/Documents", "", home) # necessary on my Windows machine
 setwd(paste(home, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3/", sep ="/"))
 
 
-rawOutputDir <- "D:/test/risqueAccidentRegen_phase3/" ## necessary for some scripts (ex harvest, fire)
+rawOutputDir <- "D:/risqueAccidentRegen_phase3/" ## necessary for some scripts (ex harvest, fire)
 ####################################################################################################
 ####################################################################################################
 wwd <- paste(getwd(), Sys.Date(), sep = "/")
@@ -34,7 +34,7 @@ simInfo <- list(simID = simInfo$id,
                 plantPostSalv =  as.logical(simInfo$plantPostSalv),
                 plantPostFireSp = simInfo$plantPostFireSp)
 
-#setwd("D:/test/risqueAccidentRegen_phase3")
+
 ####################################################################################################
 
 
@@ -42,9 +42,11 @@ simInfo <- list(simID = simInfo$id,
 ####################################################################################################
 ####################################################################################################
 ## use eval() and parse() instead of source() to deal with special character under Windows.
-eval(parse(paste(sourceDir, "outputVizFire.R", sep = "/"), encoding = 'UTF-8'))
-eval(parse(paste(sourceDir, "outputVizHarvest.R", sep = "/"), encoding = 'UTF-8'))
-eval(parse(paste(sourceDir, "outputVizVolAt120.R", sep = "/"), encoding = 'UTF-8'))
+#eval(parse(paste("../outputVizFire.R", sep = "/"), encoding = 'UTF-8'))
+
+#setwd("D:/risqueAccidentRegen_phase3")
+eval(parse(paste("../outputVizHarvest.R", sep = "/"), encoding = 'UTF-8'))
+eval(parse(paste("../outputVizVolAt120.R", sep = "/"), encoding = 'UTF-8'))
 # eval(parse(paste(sourceDir, "outputVizAge.R", sep = "/"), encoding = 'UTF-8'))
 
 # eval(parse(paste(sourceDir, "resultsTransitionMatrix.R", sep = "/"), encoding = 'UTF-8')) 

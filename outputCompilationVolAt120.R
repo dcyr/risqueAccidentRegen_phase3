@@ -79,7 +79,7 @@ for(s in 1:length(simInfo$simID)) {
         
         volAt120 <- get(load(paste0("../", simDir, "/output/outputVolAt120_", r, ".RData")))
         ### volAt120Init
-        volAt120Init <- raster(paste0("../", simDir, "/output/volAt120init_", r, ".tif"))
+        volAt120Init <- raster(paste0("../", simDir, "/output/volAt120Init_", r, ".tif"))
         names(volAt120Init) <- "volAt120_0"
         volAt120 <- stack(volAt120Init, volAt120)
         
@@ -154,27 +154,27 @@ for(s in 1:length(simInfo$simID)) {
     stopCluster(cl)
     save(outputCompiled, file = paste0("outputCompiledVolAt120_", simID, ".RData"))
 }
-
-nrow(out_02)
-nrow(out_04)
-nrow(out_06)
-
-
-foo_02 <- out_02 %>%
-    filter(year == 100)
-foo_04 <- out_04 %>%
-    filter(year == 100)
-foo_06 <- out_06 %>%
-    filter(year == 100)
-
-summary(foo_02) 
-summary(foo_04) 
-summary(foo_06) 
-
-c(mean(foo_02$volAt120_totalLandscapeAverage), quantile(foo_02$volAt120_totalLandscapeAverage, c(0.01, .1, .25, .5, .75, 0.9, 0.95, .99)))
-c(mean(foo_04$volAt120_totalLandscapeAverage), quantile(foo_04$volAt120_totalLandscapeAverage, c(0.01, .1, .25, .5, .75, 0.9, 0.95, .99)))
-c(mean(foo_06$volAt120_totalLandscapeAverage), quantile(foo_06$volAt120_totalLandscapeAverage, c(0.01, .1, .25, .5, .75, 0.9, 0.95, .99)))
-out_02 %>%
-    group_by(year, fireScenario, mgmtScenario, coverType, volAt120Cls) %>%
-    summarise(count = n()) %>%
-    as.data.frame()
+# 
+# nrow(out_02)
+# nrow(out_04)
+# nrow(out_06)
+# 
+# 
+# foo_02 <- out_02 %>%
+#     filter(year == 100)
+# foo_04 <- out_04 %>%
+#     filter(year == 100)
+# foo_06 <- out_06 %>%
+#     filter(year == 100)
+# 
+# summary(foo_02) 
+# summary(foo_04) 
+# summary(foo_06) 
+# 
+# c(mean(foo_02$volAt120_totalLandscapeAverage), quantile(foo_02$volAt120_totalLandscapeAverage, c(0.01, .1, .25, .5, .75, 0.9, 0.95, .99)))
+# c(mean(foo_04$volAt120_totalLandscapeAverage), quantile(foo_04$volAt120_totalLandscapeAverage, c(0.01, .1, .25, .5, .75, 0.9, 0.95, .99)))
+# c(mean(foo_06$volAt120_totalLandscapeAverage), quantile(foo_06$volAt120_totalLandscapeAverage, c(0.01, .1, .25, .5, .75, 0.9, 0.95, .99)))
+# out_02 %>%
+#     group_by(year, fireScenario, mgmtScenario, coverType, volAt120Cls) %>%
+#     summarise(count = n()) %>%
+#     as.data.frame()
