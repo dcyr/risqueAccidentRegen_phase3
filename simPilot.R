@@ -620,7 +620,7 @@ foreach(i = 0:(nRep-1),  # 0:(nRep-1),
           ### what would be the basal area needed to regenerate at retentionCutTarget if 
           #  that stands burned 
           
-          ### scan levels of retention to assure 50 cubic-m at 120 yrs old in case of fire (brute force)
+          ### scan levels of retention to assure 30 cubic-m at 120 yrs old in case of fire (brute force)
           propRetenVals <- seq(0, 1, 0.05)
           seedlingDens <- matrix(NA,
                                  nrow = length(g),

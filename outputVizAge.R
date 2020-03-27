@@ -1,8 +1,10 @@
 ###################################################################################################
 ###################################################################################################
-##### Visualizing fire simulations
+##### Visualizing age structure
 ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-rm(list = ls()[-which(ls() %in% c("sourceDir", "scenario"))])
+###################################################################################################
+###################################################################################################
+rm(list = ls()[-which(ls() %in% c("sourceDir", "simInfo", "rawOutputDir"))])
 # setwd("D:/regenFailureRiskAssessmentData_phase2/2018-10-23")
 # wwd <- paste(getwd(), Sys.Date(), sep = "/")
 # dir.create(wwd)
@@ -21,7 +23,8 @@ require(reshape2)
 
 ### fetching compiled results
 output <- list()
-for (s in scenario) {
+for (s in seq_along(simInfo$simID)) {
+    simID <- simInfo$simID[s]
     
     output[[s]] <- get(load(paste0("../outputCompiled/outputCompiledAge_", s, ".RData")))
     
