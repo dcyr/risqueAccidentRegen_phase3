@@ -21,7 +21,7 @@ setwd(wwd)
 nRep <- 100
 simDuration <- 150
 simStartYear <- 2015
-scen <- "RCP85" #c("baseline", "RCP85")
+scen <- "baseline" #c("baseline", "RCP85")
 noUAF <- T 
 stored <- c("stored", "noUAF", "nRep", "simDuration", "simStartYear", "scen")
 ################################################################################
