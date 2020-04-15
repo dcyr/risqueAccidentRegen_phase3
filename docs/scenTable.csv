@@ -1,13 +1,13 @@
 id,fireScenario,mgmtScenario,harvRate,clearcut,varReten,salv,plantPostFire,plantPostSalv,plantPostFireSp,plantPostSalvSp,plantLimitedAccess,sim. Status
-01,Baseline,No logging,0,F,F,F,F,NA,NA,NA,NA,done
-02,Baseline,Traditional Clearcutting,0.0062,T,F,F,F,NA,NA,NA,NA,done
-03,Baseline,Variable Retention,0.0062,F,T,F,F,NA,NA,NA,NA,done
-04,Baseline,Clearcutting w. post-fire planting ,0.0062,T,F,F,T,NA,same,NA,T,done
-05,Baseline,Clearcutting w. post-fire planting (Jack Pine),0.0062,T,F,F,T,NA,PG,NA,T,done
-06,Baseline,Clearcutting & salvage logging w. post-fire planting,0.0062,T,F,T,T,T,same,same,T,done
-07,Baseline,Clearcutting & salvage logging w. post-fire planting (Jack Pine),0.0062,T,F,T,T,T,PG,PG,T,done
-08,Baseline,Var. retention & salvage logging w. post-fire planting,0.0062,F,T,T,T,T,same,same,T,done
-09,Baseline,Var. retention & salvage logging w. post-fire planting (Jack Pine),0.0062,F,T,T,T,T,PG,PG,T,done
+1,Baseline,No logging,0,F,F,F,F,NA,NA,NA,NA,done
+2,Baseline,Traditional Clearcutting,0.0062,T,F,F,F,NA,NA,NA,NA,done
+3,Baseline,Variable Retention,0.0062,F,T,F,F,NA,NA,NA,NA,done
+4,Baseline,Clearcutting w. post-fire planting ,0.0062,T,F,F,T,NA,same,NA,T,done
+5,Baseline,Clearcutting w. post-fire planting (Jack Pine),0.0062,T,F,F,T,NA,PG,NA,T,done
+6,Baseline,Clearcutting & salvage logging w. post-fire planting,0.0062,T,F,T,T,T,same,same,T,done
+7,Baseline,Clearcutting & salvage logging w. post-fire planting (Jack Pine),0.0062,T,F,T,T,T,PG,PG,T,done
+8,Baseline,Var. retention & salvage logging w. post-fire planting,0.0062,F,T,T,T,T,same,same,T,done
+9,Baseline,Var. retention & salvage logging w. post-fire planting (Jack Pine),0.0062,F,T,T,T,T,PG,PG,T,done
 10,RCP 8.5,No logging,0,F,F,F,F,NA,NA,NA,NA,done
 11,RCP 8.5,Var. Reten & salvage logging w. post-fire planting,0.0062,F,T,T,T,T,same,same,T,done
 12,RCP 8.5,Var. Reten & salvage logging w. post-fire planting (Jack Pine),0.0062,F,T,T,T,T,PG,PG,T,done
@@ -17,8 +17,8 @@ id,fireScenario,mgmtScenario,harvRate,clearcut,varReten,salv,plantPostFire,plant
 16,Baseline,"Var. Reten & salvage logging, no post-fire, with post-salv planting ",0.0062,F,T,T,F,T,NA,same,T,done
 17,Baseline,"Clearcutting & salvage logging w. post-fire planting, no access constrains",0.0062,T,F,T,T,T,same,same,F,done
 18,Baseline,"Clearcutting & salvage logging w. post-fire planting (Jack Pine), no access constrains",0.0062,T,F,T,T,T,PG,PG,F,done
-19,RCP 8.5,Traditional Clearcutting,0.0062,T,F,F,F,NA,NA,NA,NA,done
-20,RCP 8.5,Variable Retention,0.0062,F,T,F,F,NA,NA,NA,NA,done
+19,RCP 8.5,Traditional Clearcutting,0.0062,T,F,F,F,F,NA,NA,NA,done
+20,RCP 8.5,Variable Retention,0.0062,F,T,F,F,F,NA,NA,NA,done
 21,RCP 8.5,"Clearcutting & salvage logging, no post-fire & no post-salv planting ",0.0062,T,F,T,F,F,NA,NA,NA,done
 22,RCP 8.5,"Clearcutting & salvage logging, no post-fire, with post-salv planting ",0.0062,T,F,T,F,T,NA,PG,T,done
 23,RCP 8.5,"Clearcutting & salvage logging w. post-fire planting, no access constrains",0.0062,T,F,T,T,T,same,same,F,done
