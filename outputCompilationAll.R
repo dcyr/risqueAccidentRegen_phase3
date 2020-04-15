@@ -11,9 +11,9 @@ sourceDir <- paste(sourceDir, "Sync/Travail/ECCC/regenFailureRiskAssessment_phas
 setwd(sourceDir)
 ####################################################################################################
 require(readxl)
-simInfo <- read_excel("./docs/scenTable.xlsx", sheet = 1)
-#simInfo <- simInfo[1:12,]
-
+#simInfo <- read_excel("./docs/scenTable.xlsx", sheet = 1)
+simInfo <- read.csv("./docs/scenTable.csv")
+simInfo <- simInfo[17:22,]
 simInfo <- list(simID = simInfo$id,
                 simDir =  paste0("sim_", simInfo$id),
                 fire = simInfo$fireScenario,
@@ -35,8 +35,8 @@ clusterN <-  max(1, floor(0.75*detectCores()))  ### choose number of nodes to ad
 clusterN <- 4 
 
 ## use eval() and parse() instead of source() to deal with special character under Windows.
-eval(parse(paste(sourceDir, "outputCompilationFire.R", sep = "/"), encoding = 'UTF-8'))
-eval(parse(paste(sourceDir, "outputCompilationHarvest.R", sep = "/"), encoding = 'UTF-8'))
-eval(parse(paste(sourceDir, "outputCompilationTSD.R", sep = "/"), encoding = 'UTF-8'))
+# eval(parse(paste(sourceDir, "outputCompilationFire.R", sep = "/"), encoding = 'UTF-8'))
+# eval(parse(paste(sourceDir, "outputCompilationHarvest.R", sep = "/"), encoding = 'UTF-8'))
+# eval(parse(paste(sourceDir, "outputCompilationTSD.R", sep = "/"), encoding = 'UTF-8'))
 eval(parse(paste(sourceDir, "outputCompilationVolAt120.R", sep = "/"), encoding = 'UTF-8'))
 #eval(parse(paste(sourceDir, "outputCompilationVolAt120Trans.R", sep = "/"), encoding = 'UTF-8'))
