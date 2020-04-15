@@ -12,14 +12,16 @@ setwd(sourceDir)
 ####################################################################################################
 require(readxl)
 #simInfo <- read_excel("./docs/scenTable.xlsx", sheet = 1)
-simInfo <- read.csv("./docs/scenTable.csv")
-simInfo <- simInfo[17:22,]
+simInfo <- read.csv("./docs/scenTable.csv",
+                     colClasses=c("id"="character"))
+                    
+#simInfo <- simInfo[19:22,]
 simInfo <- list(simID = simInfo$id,
                 simDir =  paste0("sim_", simInfo$id),
                 fire = simInfo$fireScenario,
                 mgmt = simInfo$mgmtScenario,
-                ctDyn = ifelse(simInfo$plantPostFireSp == "PG" |
-                                   simInfo$plantPostSalvSp == "PG" , T, F))
+                ctDyn = ifelse((simInfo$plantPostFireSp %in% c("same", NA) |
+                                   simInfo$plantPostSalvSp %in% c("same", NA)) , F, T))
 #setwd("~/Data/test/risqueAccidentRegen_phase3/")
 setwd("D:/risqueAccidentRegen_phase3")
 ####################################################################################################
