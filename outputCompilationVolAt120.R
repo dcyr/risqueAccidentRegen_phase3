@@ -19,7 +19,7 @@ require(raster)
 #require(rgeos)
 require(dplyr)
 for(s in 1:length(simInfo$simID)) {
-    
+   
     simDir <- simInfo$simDir[s]
     fr <- simInfo$fire[s]
     mgmt <- simInfo$mgmt[s]

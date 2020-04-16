@@ -15,13 +15,15 @@ require(readxl)
 simInfo <- read.csv("./docs/scenTable.csv",
                      colClasses=c("id"="character"))
                     
-#simInfo <- simInfo[19:22,]
+#simInfo <- simInfo[5,]
 simInfo <- list(simID = simInfo$id,
                 simDir =  paste0("sim_", simInfo$id),
                 fire = simInfo$fireScenario,
                 mgmt = simInfo$mgmtScenario,
-                ctDyn = ifelse((simInfo$plantPostFireSp %in% c("same", NA) |
-                                   simInfo$plantPostSalvSp %in% c("same", NA)) , F, T))
+                ctDyn = ifelse(rowSums(cbind(as.numeric(simInfo$plantPostFire),
+                                            as.numeric(simInfo$plantPostSalv)), na.rm = T) >=1 &
+                    (simInfo$plantPostSalvSp %in% c("same", NA) == F |
+                    simInfo$plantPostFireSp %in% c("same", NA) == F) , T, F))
 #setwd("~/Data/test/risqueAccidentRegen_phase3/")
 setwd("D:/risqueAccidentRegen_phase3")
 ####################################################################################################
