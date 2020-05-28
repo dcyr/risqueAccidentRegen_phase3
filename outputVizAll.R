@@ -16,9 +16,10 @@ dir.create(wwd)
 setwd(wwd)
 ####################################################################################################
 require(readxl)
-simInfo <- read_excel("../docs/scenTable.xlsx", sheet = 1)
-
-simInfo <- simInfo[1:12,]
+#simInfo <- read_excel("./docs/scenTable.xlsx", sheet = 1)
+simInfo <- read.csv("../docs/scenTable.csv",
+                    colClasses=c("id"="character"))
+#simInfo <- simInfo[1:12,]
 
 simInfo <- list(simID = simInfo$id,
                 simDir =  paste0("sim_", simInfo$id),
@@ -32,7 +33,8 @@ simInfo <- list(simID = simInfo$id,
                 salv =  as.logical(simInfo$salv),
                 plantPostFire = as.logical(simInfo$plantPostFire),
                 plantPostSalv =  as.logical(simInfo$plantPostSalv),
-                plantPostFireSp = simInfo$plantPostFireSp)
+                plantPostFireSp = simInfo$plantPostFireS,
+                plantLimitedAccess = simInfo$plantLimitedAccess)
 
 
 ####################################################################################################
@@ -42,9 +44,7 @@ simInfo <- list(simID = simInfo$id,
 ####################################################################################################
 ####################################################################################################
 ## use eval() and parse() instead of source() to deal with special character under Windows.
-#eval(parse(paste("../outputVizFire.R", sep = "/"), encoding = 'UTF-8'))
-
-#setwd("D:/risqueAccidentRegen_phase3")
+eval(parse(paste("../outputVizFire.R", sep = "/"), encoding = 'UTF-8'))
 eval(parse(paste("../outputVizHarvest.R", sep = "/"), encoding = 'UTF-8'))
 eval(parse(paste("../outputVizVolAt120.R", sep = "/"), encoding = 'UTF-8'))
 # eval(parse(paste(sourceDir, "outputVizAge.R", sep = "/"), encoding = 'UTF-8'))

@@ -23,6 +23,7 @@ output[,"salv"] <- simInfo$salv[match(output$simID, simInfo$simID)]
 output[,"plantPostFire"] <- simInfo$plantPostFire[match(output$simID, simInfo$simID)]
 output[,"plantPostSalv"] <- simInfo$plantPostSalv[match(output$simID, simInfo$simID)]
 output[,"plantPostFireSp"] <- simInfo$plantPostFireSp[match(output$simID, simInfo$simID)]
+output[,"plantLimitedAccess"] <- simInfo$plantLimitedAccess[match(output$simID, simInfo$simID)]
 
 
 areaTotal <- output %>%
@@ -69,11 +70,11 @@ df <- output %>%
     filter(!is.na(volAt120Cls)) %>%
    # mutate(volAt120Cls = paste(volAt120Cls, "cub-meters at 120 y.old") ) %>%
     group_by(simID, fireScenario, mgmtScenario, replicate, year, volAt120Cls,
-             clearcutting, varReten, salv, plantPostFire, plantPostSalv, plantPostFireSp) %>%
+             clearcutting, varReten, salv, plantPostFire, plantPostSalv, plantPostFireSp, plantLimitedAccess) %>%
     summarise(area_ha = sum(area_ha)) %>%
     ungroup() %>%
     group_by(simID, fireScenario, mgmtScenario, year, volAt120Cls,
-             clearcutting, varReten, salv, plantPostFire, plantPostSalv, plantPostFireSp) %>%
+             clearcutting, varReten, salv, plantPostFire, plantPostSalv, plantPostFireSp, plantLimitedAccess) %>%
     summarise(p25VolAt120Area_ha = quantile(area_ha, .25),
               p50VolAt120Area_ha = quantile(area_ha, .5),
               p75VolAt120Area_ha = quantile(area_ha, .75)) 
@@ -81,11 +82,11 @@ df <- output %>%
 dfMean <- output %>%
   filter(!is.na(volAt120Cls)) %>%
   group_by(simID, fireScenario, mgmtScenario, year, replicate,
-           clearcutting, varReten, salv, plantPostFire, plantPostSalv, plantPostFireSp) %>%
+           clearcutting, varReten, salv, plantPostFire, plantPostSalv, plantPostFireSp, plantLimitedAccess) %>%
   summarise(volAt120_totalLandscapeAverage = unique(volAt120_totalLandscapeAverage)) %>%
   ungroup() %>%
   group_by(simID, fireScenario, mgmtScenario, year, 
-           clearcutting, varReten, salv, plantPostFire, plantPostSalv, plantPostFireSp) %>%
+           clearcutting, varReten, salv, plantPostFire, plantPostSalv, plantPostFireSp, plantLimitedAccess) %>%
   mutate(p25VolAt120Mean_cubMeter = quantile(volAt120_totalLandscapeAverage, .25),
          p50VolAt120Mean_cubMeter = quantile(volAt120_totalLandscapeAverage, .5),
          p75VolAt120Mean_cubMeter = quantile(volAt120_totalLandscapeAverage, .75)) 
@@ -101,10 +102,13 @@ colList <- list("Harvesting Regime" = c("No harvests / No post-fire intervention
                                              "Harvests / No post-fire interventions" = "dodgerblue4",
                                              "No salv. logging / Post-fire planting" = "orangered2",
                                              "Salv. logging / Post-fire planting" = "orangered4"),
-                "Planted species" = c("No harvests / No post-fire interventions" = "seagreen",
-                                      "Pre-fire composition" = "darkslategrey",
-                                      "Jack Pine" = "peru"))
+                "Planted species" = c("Pre-fire composition (<2 km)" = "darkslategrey",
+                                      "Pre-fire composition" = "darkslategray3",
+                                      "Jack Pine (<2 km)" = "tan",
+                                      "Jack Pine" = "peru",
+                                      "N/A (No planting)" = "grey"))
 
+yMax <- 5*(ceiling(  100*max(df$p50VolAt120Area_ha/areaTotal)/5))
 
 pCls <- pMean <- list()
 
@@ -147,16 +151,21 @@ for (i in seq_along(colList)) {
     
     if(i == 3) {
         plotDf <- df %>%
-          mutate(plotLvl = ifelse(plantPostFireSp == "PG", labels[3],
-                                  ifelse(plantPostFireSp == "same", labels[2],
-                                         ifelse(!(varReten | clearcutting),labels[1], NA))),
+          mutate(plotLvl = ifelse(is.na(plantPostFireSp), labels[5],
+                                  ifelse(plantPostFireSp == "PG",
+                                         ifelse(plantLimitedAccess, labels[3], labels[4]),
+                                         ifelse(plantPostFireSp == "same",
+                                                ifelse(plantLimitedAccess, labels[1], labels[2]),
+                                                NA))),
                  plotLvl = factor(plotLvl, levels = labels)) %>%
           filter(!is.na(plotLvl)) 
         
         plotMean <- dfMean %>%
-          mutate(plotLvl = ifelse(plantPostFireSp == "PG", labels[3],
-                                  ifelse(plantPostFireSp == "same", labels[2],
-                                         ifelse(!(varReten | clearcutting),labels[1], NA))),
+          mutate(plotLvl = ifelse(is.na(plantPostFireSp), labels[5],
+                                  ifelse(plantPostFireSp == "PG",
+                                         ifelse(plantLimitedAccess, labels[3], labels[4]),
+                                         ifelse(plantPostFireSp == "same",
+                                                ifelse(plantLimitedAccess, labels[1], labels[2]), NA))),
                  plotLvl = factor(plotLvl, levels = labels)) %>%
           filter(!is.na(plotLvl))
 
@@ -180,6 +189,7 @@ for (i in seq_along(colList)) {
                            values = c("Baseline" = 1,
                                       "RCP 8.5" = 2),
                            guide = "none") +
+     ylim(0, yMax) +
      theme_bw() +
      theme(legend.position = "right",
            legend.box="horizontal",
@@ -256,7 +266,7 @@ for (i in seq_along(colList)) {
 require(patchwork)
 
 png(filename= paste0("volAt120_cls.png"),
-    width = 14, height = 8, units = "in", res = 600, pointsize=10)
+    width = 14, height = 12, units = "in", res = 600, pointsize=10)
 
 print(pCls[[1]] / pCls[[2]] / pCls[[3]] +
         plot_annotation(

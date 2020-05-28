@@ -108,11 +108,12 @@ harvestCompilation <- output %>%
            retenVol_cubMeter = -volRetenTotal_cubMeter ,
            plantPostSalv_ha = areaPlantPostSalv_ha,
            plantPostFire_ha = areaPlantPostFire_ha,
-           managedTotal_ha = totalEligibleArea_ha) %>%
+           managedTotal_ha = totalEligibleArea_ha,
+           harvestAreaTotal_ha = harvestArea_ha + salvArea_ha ) %>%#+ retentArea_ha
     select(simID, fireScenario, replicate, year, replicate, year,
            clearcutting, varReten, salv, plantPostFire, plantPostSalv,
            managedTotal_ha, targetArea_ha,
-           harvestArea_ha, harvestVol_cubMeters, salvArea_ha, salvVol_cubMeters,
+           harvestAreaTotal_ha, harvestVol_cubMeters, salvArea_ha, salvVol_cubMeters,
            retentArea_ha, retenVol_cubMeter,
            plantPostSalv_ha, plantPostFire_ha)
            
@@ -139,6 +140,16 @@ harvestSummary <- output %>%
               harvestAreaP90_ha = quantile(areaHarvestedTotal_ha, .90),
               harvestAreaP95_ha = quantile(areaHarvestedTotal_ha, .95),
               harvestAreaP99_ha = quantile(areaHarvestedTotal_ha, .99),
+              retenAreaMean_ha = mean(areaRetenTotal_ha),
+              retenAreaP01_ha = quantile(areaRetenTotal_ha, .01),
+              retenAreaP05_ha = quantile(areaRetenTotal_ha, .05),
+              retenAreaP10_ha = quantile(areaRetenTotal_ha, .10),
+              retenAreaP25_ha = quantile(areaRetenTotal_ha, .25),
+              retenAreaP50_ha = quantile(areaRetenTotal_ha, .5),
+              retenAreaP75_ha = quantile(areaRetenTotal_ha, .75),
+              retenAreaP90_ha = quantile(areaRetenTotal_ha, .90),
+              retenAreaP95_ha = quantile(areaRetenTotal_ha, .95),
+              retenAreaP99_ha = quantile(areaRetenTotal_ha, .99),
               salvAreaMean_ha = mean(areaSalvagedTotal_ha, na.rm = T),
               salvAreaP01_ha = quantile(areaSalvagedTotal_ha, .01, na.rm = T),
               salvAreaP05_ha = quantile(areaSalvagedTotal_ha, .05, na.rm = T),
@@ -168,7 +179,8 @@ harvestSummary <- output %>%
               salvVolP75_cubMeters = round(quantile(volSalvagedTotal_cubMeter, .75)),
               salvVolP90_cubMeters = round(quantile(volSalvagedTotal_cubMeter, .90)),
               salvVolP95_cubMeters = round(quantile(volSalvagedTotal_cubMeter, .95)),
-              salvVolP99_cubMeters = round(quantile(volSalvagedTotal_cubMeter, .99)))
+              salvVolP99_cubMeters = round(quantile(volSalvagedTotal_cubMeter, .99)),
+              harvestAreaTotalMean_ha = harvestAreaMean_ha + salvAreaMean_ha)
 
 write.csv(harvestSummary, paste0("harvestSummary.csv"), row.names = F)
 
@@ -182,12 +194,11 @@ write.csv(harvestSummary, paste0("harvestSummary.csv"), row.names = F)
 ### summarizing results, shortfall probs
 shortfallDF <- harvestCompilation %>%
     #group_by(scenario, year, replicate) %>%
-    mutate(harvAreaTotal_ha = harvestArea_ha + salvArea_ha,
-           shortfall_tol75 = harvAreaTotal_ha < .25*targetArea_ha,
-           shortfall_tol50 = harvAreaTotal_ha < .50*targetArea_ha,
-           shortfall_tol25 = harvAreaTotal_ha < .75*targetArea_ha,
-           shortfall_tol10 = harvAreaTotal_ha < .90*targetArea_ha,
-           shortfall_tol05 = harvAreaTotal_ha < .95*targetArea_ha) %>%
+    mutate(shortfall_tol75 = harvestAreaTotal_ha < .25*targetArea_ha,
+           shortfall_tol50 = harvestAreaTotal_ha < .50*targetArea_ha,
+           shortfall_tol25 = harvestAreaTotal_ha < .75*targetArea_ha,
+           shortfall_tol10 = harvestAreaTotal_ha < .90*targetArea_ha,
+           shortfall_tol05 = harvestAreaTotal_ha < .95*targetArea_ha) %>%
     group_by(simID, fireScenario, replicate) %>%
     arrange(year) %>%
     mutate(shortfall_tol75 = cumsum(shortfall_tol75)>=1,
@@ -272,7 +283,7 @@ for(v in seq_along(varNames)) {
                         group = mgmtScenario,
                         colour = var)) +
         facet_wrap(~ fireScenario, ncol = 1) +
-        geom_line(aes(y =100 * harvestAreaMean_ha/targetArea_ha),
+        geom_line(aes(y =100 * harvestAreaTotalMean_ha /targetArea_ha),
                   size = 0.75) +
         scale_colour_manual(values = cols)
         
@@ -388,25 +399,16 @@ for(v in seq_along(varNames)) {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-for(v in c("harv", "varReten", "salv", "plantPostFire", "plantPostSalv", "plantPostSalvSp")) {
-    if(v == "harv") {
-        df <- summaryHarvest %>%
-            mutate(harv = ifelse(simID %in% simInfo$simID[which(simInfo$mgmt != "No logging")],
-                                 "Harvest", "No harvest"))
-        m <- ggplot(df, aes(x = year + 2015,
-                            colour = harv))
-        
-    }
-}
-
+# 
+# 
+# for(v in c("harv", "varReten", "salv", "plantPostFire", "plantPostSalv", "plantPostSalvSp")) {
+#     if(v == "harv") {
+#         df <- summaryHarvest %>%
+#             mutate(harv = ifelse(simID %in% simInfo$simID[which(simInfo$mgmt != "No logging")],
+#                                  "Harvest", "No harvest"))
+#         m <- ggplot(df, aes(x = year + 2015,
+#                             colour = harv))
+#         
+#     }
+# }
+# 

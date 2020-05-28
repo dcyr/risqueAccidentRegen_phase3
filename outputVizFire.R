@@ -31,7 +31,9 @@ for (s in seq_along(simInfo$simID)) {
     initYear <- simInfo$initYear
     
     ### fetching outputs
-    output[[s]] <- get(load(paste0(paste0("../", "outputCompiled/outputCompiledFire_", simID, ".RData"))))
+    out <- get(load(paste0(paste0("../", "outputCompiled/outputCompiledFire_", simID, ".RData"))))
+    out[,"simID"] <- as.factor(as.character((out[,"simID"])))
+    output[[s]] <- out
     
     ## fetching fire regimes
     
@@ -62,6 +64,7 @@ for (s in seq_along(simInfo$simID)) {
     
     x <- distinct(x)
     fireRegime[[simID]] <- x
+    print(s)
     
 }
 output <- do.call("rbind", output)
