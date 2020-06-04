@@ -1,9 +1,5 @@
 ###################################################################################################
 ###################################################################################################
-##### Visualizing age structure
-##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
-###################################################################################################
-###################################################################################################
 rm(list = ls()[-which(ls() %in% c("sourceDir", "simInfo", "rawOutputDir"))])
 # setwd("D:/regenFailureRiskAssessmentData_phase2/2018-10-23")
 # wwd <- paste(getwd(), Sys.Date(), sep = "/")
@@ -25,19 +21,30 @@ require(reshape2)
 output <- list()
 for (s in seq_along(simInfo$simID)) {
     simID <- simInfo$simID[s]
-    
-    output[[s]] <- get(load(paste0("../outputCompiled/outputCompiledAge_", s, ".RData")))
+    simDir <- simInfo$simDir[s]
+    output[[s]] <- get(load(paste0("../outputCompiled/outputCompiledAge_", simID, ".RData")))
     
     
 }
-outputCompiled <- do.call("rbind", output)
-outputCompiled <- outputCompiled %>%
+output <- do.call("rbind", output)
+output <- output %>%
     filter(uaf == "total")
-nSims <- nrow(distinct(outputCompiled, replicate))
+
+output[,"clearcutting"] <- simInfo$clearcutting[match(output$simID, simInfo$simID)]
+output[,"varReten"] <- simInfo$varReten[match(output$simID, simInfo$simID)]
+output[,"salv"] <- simInfo$salv[match(output$simID, simInfo$simID)]
+output[,"plantPostFire"] <- simInfo$plantPostFire[match(output$simID, simInfo$simID)]
+output[,"plantPostSalv"] <- simInfo$plantPostSalv[match(output$simID, simInfo$simID)]
+output[,"plantPostFireSp"] <- simInfo$plantPostFireSp[match(output$simID, simInfo$simID)]
+output[,"plantLimitedAccess"] <- simInfo$plantLimitedAccess[match(output$simID, simInfo$simID)]
+
+
+
+nSims <- nrow(distinct(output, replicate))
 
 
 ## management plan
-managementPlan <- get(load(paste0("../", s, "/managementPlan.RData")))
+managementPlan <- get(load(paste0(rawOutputDir, simDir, "/managementPlan.RData")))
 plan <- managementPlan$baseline
 regenMaxAge <- plan$regenMaxAge
 # oldMinProp <- plan$oldMinProp
@@ -51,19 +58,22 @@ targets <- data.frame(target = c(plan$regenMaxProp, plan$oldMinProp),
 
 
 
-df  <-  outputCompiled %>%
+df  <-  output %>%
     mutate(oldProp = oldArea_ha/managedAreaTotal_ha,
-           regenProp = regenArea_ha/managedAreaTotal_ha,
-           ID = as.numeric(as.factor(paste(uaf, scenario, replicate))))
+           regenProp = regenArea_ha/managedAreaTotal_ha)
+#,
+#           ID = as.numeric(as.factor(paste(uaf, scenario, replicate))))
 
 vars <- colnames(df)
 vars <- vars[grep("Prop", vars)]
-df <- melt(df, id.vars = c("uaf", "ID", "scenario", "replicate", "year"), 
+idVars <- c("simID", "replicate", "year", "uaf", "fireScenario",  
+            "clearcutting", "varReten", "salv", "plantPostFire", "plantPostSalv", "plantPostFireSp", "plantLimitedAccess")
+df <- melt(df, id.vars = idVars, 
            measure.vars = vars,
            variable.name = "var",
            value.name = "prop")
 
-write.csv(select(df, scenario, uaf, replicate, year, var, prop),
+write.csv(df,
           file = paste0("ageSummary.csv"), row.names = F)
 
 ## defining variables, and cleaning up names
@@ -76,48 +86,37 @@ df[grep("oldProp", df$var), "var"] <- ageLevels[2]
 df$var <- factor(df$var, levels = ageLevels)
 
 
-### summarizing results, percentile & such
-summaryOld <- outputCompiled %>%
-    mutate(oldProp = oldArea_ha/managedAreaTotal_ha) %>%
-    group_by(uaf, scenario, year) %>%
-    summarise(#p01oldProp = quantile(oldProp, .01),
-              p05 = quantile(oldProp, .05),
-              p25 = quantile(oldProp, .25),
-              p50 = quantile(oldProp, .5),
-              p75 = quantile(oldProp, .75),
-              p95 = quantile(oldProp, .95)) %>%
-    mutate(var = ageLevels[2])
-              #p99oldProp = quantile(oldProp, .99))
+idVars <- c(
+            )
 
-summaryRegen <- outputCompiled %>%
-    mutate(regenProp = regenArea_ha/managedAreaTotal_ha) %>%
-    group_by(uaf, scenario, year) %>%
-    summarise(#p01regenProp = quantile(regenProp, .01),
-              p05 = quantile(regenProp, .05),
-              p25 = quantile(regenProp, .25),
-              p50 = quantile(regenProp, .5),
-              p75 = quantile(regenProp, .75),
-              p95 = quantile(regenProp, .95)) %>%
-    mutate(var = ageLevels[1])
-             # p99regenProp = quantile(regenProp, .99))
+### summarizing results, percentile & such
+dfSummary <- df %>%
+    group_by(simID, year, uaf, fireScenario,
+             clearcutting, varReten, salv, plantPostFire, plantPostSalv, plantPostFireSp, plantLimitedAccess,
+             var) %>%
+    summarise(p05 = quantile(prop, .05),
+              p25 = quantile(prop, .25),
+              p50 = quantile(prop, .5),
+              p75 = quantile(prop, .75),
+              p95 = quantile(prop, .95))
+   
 
 
 ##############################################################################
 ### Plotting realized age structures
 #######
-dfSummary <- rbind(summaryOld, summaryRegen)
 
 
 df <- merge(df, dfSummary)
 
 
 
-p <- c(p.050 = "5%", p.250 = "25%", p.500 = "médiane", p.750 = "75%", p.950 = "95%")
+p <- c(p05 = "5%", p25 = "25%", p50 = "médiane", p75 = "75%", p95 = "95%")
 
 m <- ggplot(df, aes(x = year + 2015, y = 100*prop,
-                    group = ID)) +
+                    group = replicate)) +
                     #linetype = percentile, colour = variable)) +
-    facet_grid(scenario ~ var) +
+    facet_grid(simID ~ var) +
     geom_line(colour = "black", alpha = 0.1) +#
     geom_line(aes(y = 100*p50, group = 1),
               colour = "lightblue",
@@ -142,7 +141,7 @@ m <- ggplot(df, aes(x = year + 2015, y = 100*prop,
     
 
 png(filename= paste0("ageStructureRealized.png"),
-    width = 8, height = 5, units = "in", res = 600, pointsize=10)
+    width = 5, height = 22, units = "in", res = 600, pointsize=10)
 
 #options(scipen=999)
 

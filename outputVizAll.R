@@ -44,9 +44,9 @@ simInfo <- list(simID = simInfo$id,
 ####################################################################################################
 ####################################################################################################
 ## use eval() and parse() instead of source() to deal with special character under Windows.
-eval(parse(paste("../outputVizFire.R", sep = "/"), encoding = 'UTF-8'))
-eval(parse(paste("../outputVizHarvest.R", sep = "/"), encoding = 'UTF-8'))
-eval(parse(paste("../outputVizVolAt120.R", sep = "/"), encoding = 'UTF-8'))
-# eval(parse(paste(sourceDir, "outputVizAge.R", sep = "/"), encoding = 'UTF-8'))
+# eval(parse(paste("../outputVizFire.R", sep = "/"), encoding = 'UTF-8'))
+# eval(parse(paste("../outputVizHarvest.R", sep = "/"), encoding = 'UTF-8'))
+# eval(parse(paste("../outputVizVolAt120.R", sep = "/"), encoding = 'UTF-8'))
+eval(parse(paste(sourceDir, "outputVizAge.R", sep = "/"), encoding = 'UTF-8'))
 
 # eval(parse(paste(sourceDir, "resultsTransitionMatrix.R", sep = "/"), encoding = 'UTF-8')) 
