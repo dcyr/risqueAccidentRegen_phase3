@@ -73,9 +73,13 @@ for (s in seq_along(simInfo$simID)) {
 if(length(output)>1) {
     output <- do.call("rbind", output)
     harvTarget <- do.call("rbind", harvTarget)
+    harvTarget[,"simID"] <- as.character(rownames(harvTarget))
+    harvTarget <- harvTarget[,c("simID", "uaf", "totalEligibleArea_ha", "harvTargetArea_ha")]
 } else {
     output <- output[[scenario]]
     harvTarget <- harvTarget[[simID]]
+    harvTarget[,"simID"] <- as.character(rownames(harvTarget))
+    harvTarget <- harvTarget[,c("simID", "uaf", "totalEligibleArea_ha", "harvTargetArea_ha")]
 }
 # nSims <- output %>% 
 #     group_by(mgmtScenario, year) %>%
