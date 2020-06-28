@@ -36,11 +36,11 @@ require(parallel)
 require(foreach)
 # clusterN <- 2
 clusterN <-  max(1, floor(0.75*detectCores()))  ### choose number of nodes to add to cluster.
-clusterN <- 4 
+clusterN <- 24 
 
 ## use eval() and parse() instead of source() to deal with special character under Windows.
 # eval(parse(paste(sourceDir, "outputCompilationFire.R", sep = "/"), encoding = 'UTF-8'))
 # eval(parse(paste(sourceDir, "outputCompilationHarvest.R", sep = "/"), encoding = 'UTF-8'))
-eval(parse(paste(sourceDir, "outputCompilationTSD.R", sep = "/"), encoding = 'UTF-8'))
-# eval(parse(paste(sourceDir, "outputCompilationVolAt120.R", sep = "/"), encoding = 'UTF-8'))
+# eval(parse(paste(sourceDir, "outputCompilationTSD.R", sep = "/"), encoding = 'UTF-8'))
+eval(parse(paste(sourceDir, "outputCompilationVol.R", sep = "/"), encoding = 'UTF-8'))
 #eval(parse(paste(sourceDir, "outputCompilationVolAt120Trans.R", sep = "/"), encoding = 'UTF-8'))
