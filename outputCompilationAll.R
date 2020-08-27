@@ -23,7 +23,9 @@ simInfo <- list(simID = simInfo$id,
                 ctDyn = ifelse(rowSums(cbind(as.numeric(simInfo$plantPostFire),
                                             as.numeric(simInfo$plantPostSalv)), na.rm = T) >=1 &
                     (simInfo$plantPostSalvSp %in% c("same", NA) == F |
-                    simInfo$plantPostFireSp %in% c("same", NA) == F) , T, F))
+                    simInfo$plantPostFireSp %in% c("same", NA) == F) , T, F),
+                plantation  =  ifelse(rowSums(cbind(as.numeric(simInfo$plantPostFire),
+                                                    as.numeric(simInfo$plantPostSalv)), na.rm = T) >=1, T, F))
 #setwd("~/Data/test/risqueAccidentRegen_phase3/")
 setwd("D:/risqueAccidentRegen_phase3")
 ####################################################################################################
@@ -36,11 +38,12 @@ require(parallel)
 require(foreach)
 # clusterN <- 2
 clusterN <-  max(1, floor(0.75*detectCores()))  ### choose number of nodes to add to cluster.
-clusterN <- 24 
+clusterN <- 16 
 
 ## use eval() and parse() instead of source() to deal with special character under Windows.
 # eval(parse(paste(sourceDir, "outputCompilationFire.R", sep = "/"), encoding = 'UTF-8'))
 # eval(parse(paste(sourceDir, "outputCompilationHarvest.R", sep = "/"), encoding = 'UTF-8'))
 # eval(parse(paste(sourceDir, "outputCompilationTSD.R", sep = "/"), encoding = 'UTF-8'))
-eval(parse(paste(sourceDir, "outputCompilationVol.R", sep = "/"), encoding = 'UTF-8'))
+# eval(parse(paste(sourceDir, "outputCompilationVol.R", sep = "/"), encoding = 'UTF-8'))
+eval(parse(paste(sourceDir, "outputCompilationPlantationl.R", sep = "/"), encoding = 'UTF-8'))
 #eval(parse(paste(sourceDir, "outputCompilationVolAt120Trans.R", sep = "/"), encoding = 'UTF-8'))

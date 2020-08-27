@@ -87,69 +87,69 @@ for(s in 1:length(simInfo$simID)) {
     #######
     outputCompiled <- foreach(i = seq_along(x),
                               .combine = "rbind") %dopar% {# seq_along(x)
-        require(raster)
-        require(reshape2)
-        require(dplyr)
-
-        # s <- scenario[i]
-        r <- replicates[i]
-        
-    
-        ## fetching outputs
-        age <- get(load(paste(outputFolder, x[i], sep="/")))
-        ## focusing of forest eligible to harvest
-        age[is.na(spEligible)] <- NA
-        
-        ## compiling age structure
-        oldArea <- data.frame(zonal(age>=oldMinAge, uaf,  "sum")[,-1] * convFactor)
-        regenArea <-  data.frame(zonal(age<regenMaxAge, uaf,  "sum")[,-1] * convFactor)
-        
-    
-        year <- as.numeric(gsub("[^0-9]", "", rownames(oldArea)))
-        colnames(oldArea)[uaf_RAT$ID] <-
-            colnames(regenArea)[uaf_RAT$ID] <- as.character(uaf_RAT[uaf_RAT$ID, "value"])
-        
-        
-        ## total
-        # oldArea[, "total"] <- apply(oldArea, 1, sum)
-        # regenArea[, "total"] <- apply(regenArea, 1, sum)
-        
-        ## tidying up data frame
-        oldArea <- data.frame(year,
-                              oldArea)
-        regenArea <- data.frame(year,
-                                regenArea)
-        
-    
-        oldArea <- melt(oldArea,
-                        id.vars = c("year"),
-                        variable.name = "uaf",
-                        value.name = "oldArea_ha")
-        
-        regenArea <- melt(regenArea,
-                        id.vars = c("year"),
-                        variable.name = "uaf",
-                        value.name = "regenArea_ha")
-        
-        oldArea$uaf <- gsub("X", "", oldArea$uaf)
-        oldArea$uaf <- gsub("\\.", "-", oldArea$uaf)
-
-        regenArea$uaf <- gsub("X", "", regenArea$uaf)
-        regenArea$uaf <- gsub("\\.", "-", regenArea$uaf)
-
-        
-        
-        out <- merge(regenArea, oldArea)
-        out <- merge(out, eligibleArea) %>%
-            mutate(simID = simID,
-                   replicate = r,
-                   fireScenario = fr,
-                   mgmtScenario = mgmt)
-         
-        print(paste(simID, "age", r))
-        return(out)
-        
-    }
+                                  require(raster)
+                                  require(reshape2)
+                                  require(dplyr)
+                                  
+                                  # s <- scenario[i]
+                                  r <- replicates[i]
+                                  
+                                  
+                                  ## fetching outputs
+                                  age <- get(load(paste(outputFolder, x[i], sep="/")))
+                                  ## focusing of forest eligible to harvest
+                                  age[is.na(spEligible)] <- NA
+                                  
+                                  ## compiling age structure
+                                  oldArea <- data.frame(zonal(age>=oldMinAge, uaf,  "sum")[,-1] * convFactor)
+                                  regenArea <-  data.frame(zonal(age<regenMaxAge, uaf,  "sum")[,-1] * convFactor)
+                                  
+                                  
+                                  year <- as.numeric(gsub("[^0-9]", "", rownames(oldArea)))
+                                  colnames(oldArea)[uaf_RAT$ID] <-
+                                      colnames(regenArea)[uaf_RAT$ID] <- as.character(uaf_RAT[uaf_RAT$ID, "value"])
+                                  
+                                  
+                                  ## total
+                                  # oldArea[, "total"] <- apply(oldArea, 1, sum)
+                                  # regenArea[, "total"] <- apply(regenArea, 1, sum)
+                                  
+                                  ## tidying up data frame
+                                  oldArea <- data.frame(year,
+                                                        oldArea)
+                                  regenArea <- data.frame(year,
+                                                          regenArea)
+                                  
+                                  
+                                  oldArea <- melt(oldArea,
+                                                  id.vars = c("year"),
+                                                  variable.name = "uaf",
+                                                  value.name = "oldArea_ha")
+                                  
+                                  regenArea <- melt(regenArea,
+                                                    id.vars = c("year"),
+                                                    variable.name = "uaf",
+                                                    value.name = "regenArea_ha")
+                                  
+                                  oldArea$uaf <- gsub("X", "", oldArea$uaf)
+                                  oldArea$uaf <- gsub("\\.", "-", oldArea$uaf)
+                                  
+                                  regenArea$uaf <- gsub("X", "", regenArea$uaf)
+                                  regenArea$uaf <- gsub("\\.", "-", regenArea$uaf)
+                                  
+                                  
+                                  
+                                  out <- merge(regenArea, oldArea)
+                                  out <- merge(out, eligibleArea) %>%
+                                      mutate(simID = simID,
+                                             replicate = r,
+                                             fireScenario = fr,
+                                             mgmtScenario = mgmt)
+                                  
+                                  print(paste(simID, "age", r))
+                                  return(out)
+                                  
+                              }
     
     stopCluster(cl)
     outputCompiled <- arrange(outputCompiled, simID, uaf, replicate, year)
