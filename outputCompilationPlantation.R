@@ -48,11 +48,12 @@ for(s in 1:length(simInfo$simID)) {
   
   
   ## fetching age of commercial maturity 
+  maturity <- coverTypes
+  
   if(ctDyn) {
-      maturity <- plan$maturity[which(names(plan$ageRef) == "PG")]
+    maturity[] <- plan$maturity[which(names(plan$ageRef) == "PG")] 
   } else {
-      maturity <- coverTypes
-      maturity[] <- plan$maturity[values(maturity)]
+    maturity[] <- plan$maturity[values(maturity)]
   }
   ####################################################################
   ####################################################################
@@ -103,12 +104,14 @@ for(s in 1:length(simInfo$simID)) {
       
       
       ## all plantations
-      plantation <- plant$postFire
+      plantation <- plant$postSalv
       plantation[is.na(plantation)] <- 0
-      plantation[plant$postSalv==1] <- 1
-  
+      if("postFire" %in% names(plant)) {
+        plantation[plant$postFire==1] <- 1
+      }
+      
       plantVal <- values(plantation)
-      indexPlant <- which(apply(plantVal, 1, sum) > 1)
+      indexPlant <- which(apply(plantVal, 1, sum) >= 1)
       plantVal <- plantVal[indexPlant,]
       fireVal <- values(fire)[indexPlant,]
       tsdVal <- values(tsd)[indexPlant,]
@@ -120,7 +123,7 @@ for(s in 1:length(simInfo$simID)) {
       
       ##############################################################################
       #######
-      colPrefix <- "postFire_"
+      colPrefix <- "postSalv_"
       
       ### summarizing results, shortfall probs
       plantReburns <- as.data.frame(plantVal) %>%
@@ -185,6 +188,7 @@ for(s in 1:length(simInfo$simID)) {
                mgmt = mgmt,
                replicate = r) %>%
         merge(ctDf)
+      print(paste(simID, i))
       return(int)
   }
   
@@ -192,86 +196,4 @@ for(s in 1:length(simInfo$simID)) {
   outputCompiled <- arrange(outputCompiled, simID, replicate, index, year)
   save(outputCompiled, file = paste0("outputCompiledPlantation_", simID, ".RData"))
 }
-# 
-# # 
-# foo <- outputCompiled %>%
-#   filter(year <= 60) %>%
-#   mutate(surv = int > matThresh | cens == 0)
-#   
-# head(foo)
-# summary(foo)
-# mean(foo$surv)
-# 
-# 
-# time <- foo$int
-# cens <- foo$cens
-# require(survival)
-# int <- Surv(time[time>0], cens[time>0], type = "right")
-# 
-# time <- outputCompiled$int
-# cens <- outputCompiled$cens
-# require(survival)
-# int <- Surv(time[time>0], cens[time>0], type = "right")
-# 
-# 
-# 
-# fit <- coxph(int ~ 1)
-# fitExp <- survreg(int ~ 1, dist="exponential")
-# fitWeib <- survreg(int ~ 1, dist="weibull")
-# 
-# 
-# b <- exp(fitExp$coefficients)
-# b <- exp(fitWeib$coefficients)
-# c <- 1/(fitWeib$scale)
-# fc <- b*gamma((1/c)+1)
-# 
-# 
-# pexp(q = 90, rate = 1/58, lower.tail = F)
 
-
-
-
- 
-# cox_reg <- coxph(int ~ 1)
-# base.cox <- basehaz(cox_reg)
-# maxHaz <- max(base.cox[,1])
-# index <- which(base.cox[,1] == maxHaz)
-# fc <- mean(base.cox[index,"time"])/maxHaz  
-  
-  
-
-# mean(foo$surv2Maturity)
-# 
-# require(ggplot2)
-# 
-# ggplot(foo, aes(x = year, y = surv2Maturity)) +
-#   geom_smooth(#,group = periode
-#               method = "loess",
-#               level = 0.9,
-#               span = 0.5,
-#               size = 0.25)
-# 
-# 
-# mean(foo$surv3Maturity)
-#   group_by(index)
-#   
-# 
-# 
-
-# 
-
-# 
-# b <- exp(fitExp$coefficients)
-# 
-# b <- exp(fitWeib$coefficients)
-# c <- 1/(fitWeib$scale)
-# fc <- b*gamma((1/c)+1)
-# 
-# 
-
-# 
-# 
-# 
-# summary(int)
-# basehaz(fit)
-# predict(coxM, type = "expected")
