@@ -6,102 +6,29 @@
 
 iqs_extract <- function(r = IQS_POT,
                         stands = index) {
-    
-    for (l in 1:nlayers(r)) {
-        tmp <- r[[l]]
-        tmp <- tmp[stands]
-        if(nlayers(r)>1) {
-            if(l == 1) {
-                x <- data.frame(tmp) 
-            } else {
-                x <- data.frame(x, tmp)
-            }   
-        } else {
-            x <- tmp
-            
-        }
-    }
-    if(nlayers(r)>1) {
-        colnames(x) <- names(r)
-    }
-    
+    x <- r[stands]
     return(x)
 }
 
 age_extract <- function(r = tsd,
                         stands = index) {
-    for (l in 1:nlayers(r)) {
-        tmp <- r[[l]]
-        tmp <- tmp[stands]
-        if(nlayers(r)>1) {
-            if(l == 1) {
-                x <- data.frame(tmp) 
-            } else {
-                x <- data.frame(x, tmp)
-            }   
-        } else {
-            x <- tmp
-            
-        }
-    }
-    if(nlayers(r)>1) {
-        colnames(x) <- names(r)
-    }
-    
+    x <- r[stands]
     return(x)
 }
 
-############################
 sp_extract <- function(r = coverTypes,
                        rat = coverTypes_RAT,
                        stands = index) {
-    
-    for (l in 1:nlayers(r)) {
-        tmp <- r[[l]]
-        tmp <- rat[match(tmp[stands], rat$ID), "value"]
-        if(nlayers(r)>1) {
-            if(l == 1) {
-                x <- data.frame(tmp) 
-            } else {
-                x <- data.frame(x, tmp)
-            }
-        } else {
-            x <- tmp
-            
-        }
-        
-    }
-    if(nlayers(r)>1) {
-        colnames(x) <- names(r)
-    }
-    return(x)    
-} 
-
-IDR100_extract <- function(r = IDR100,
-                           stands = index) {
-    
-    for (l in 1:nlayers(r)) {
-        tmp <- r[[l]]
-        tmp <- tmp[stands]
-        tmp[tmp>1] <- 1
-        if(nlayers(r)>1) {
-            if(l == 1) {
-                x <- data.frame(tmp) 
-            } else {
-                x <- data.frame(x, tmp)
-            }   
-        } else {
-            x <- tmp
-            
-        }
-    }
-    if(nlayers(r)>1) {
-        colnames(x) <- names(r)
-    }
-    
+    x <- rat[match(r[stands], rat$ID), "value"]
     return(x)
 }
 
+IDR100_extract <- function(r = IDR100,
+                           stands = index) {
+    x <- r[stands]
+    x[x>1] <- 1
+    return(x)
+}
 
 ## age at 1m
 ac_extract <- function(a,
@@ -111,15 +38,14 @@ ac_extract <- function(a,
                        tFnc,
                        cap = 150) {
     x <-  round(a - tFnc(sp = sp,
-                         iqs = iqs,
-                         tCoef = tCoef))
+                      iqs = iqs,
+                      tCoef = tCoef))
     
     x[iqs == 0] <- 0
     ## capping Ac at 150
     x[x>cap] <- cap
     return(round(x))
 }
-
 
 g_extract <- function(sp,
                       Ac,
@@ -131,33 +57,34 @@ g_extract <- function(sp,
                       withSenescence,
                       DqCoef,
                       merchantable) {
+
     
     ## basal area (all diameters, Ac >= 25)
     g <- GFnc(sp, Ac, iqs, rho100,
          HdCoef, GCoef, rho100Coef,
          withSenescence = F, DqCoef, merchantable = F)
     
-    g <- GFnc(sp, Ac, iqs, rho100 = r100,
-              HdCoef, GCoef, rho100Coef,
-              withSenescence = F, DqCoef, merchantable = F)
+    # g2 <- GFnc(sp, Ac, iqs, rho100 = r100,
+    #           HdCoef, GCoef, rho100Coef,
+    #           withSenescence = F, DqCoef, merchantable = F)
     
     ## basal area (all diameters, approximation for stands with Ac < 25)
     ageIndex <- which(Ac < 25)
     if(length(ageIndex)>0) {
         x <- #Ac[ageIndex]/25 *
             GFnc(sp = sp[ageIndex], Ac = 25, iqs = iqs[ageIndex],
-                 rho100 = r100[ageIndex],
+                 rho100 = rho100[ageIndex],
                  HdCoef = HdCoef, GCoef = GCoef,
                  rho100Coef = rho100Coef, scenesCoef = NULL, withSenescence = F,
                  DqCoef = DqCoef, merchantable = F) - 
             (25-Ac[ageIndex]) *
             (GFnc(sp = sp[ageIndex], Ac = 26, iqs = iqs[ageIndex],
-                  rho100 = r100[ageIndex],
+                  rho100 = rho100[ageIndex],
                   HdCoef = HdCoef, GCoef = GCoef,
                   rho100Coef = rho100Coef, scenesCoef = NULL, withSenescence = F,
                   DqCoef = DqCoef, merchantable = F) - 
                  GFnc(sp = sp[ageIndex], Ac = 25, iqs = iqs[ageIndex],
-                      rho100 = r100[ageIndex],
+                      rho100 = rho100[ageIndex],
                       HdCoef = HdCoef, GCoef = GCoef,
                       rho100Coef = rho100Coef, scenesCoef = NULL, withSenescence = F,
                       DqCoef = DqCoef, merchantable = F))
@@ -168,7 +95,6 @@ g_extract <- function(sp,
     
     return(g)
 }
-
 # 
 # v_extract <- function(sp, Ac, iqs, rho100 = r100,
 #                       rho100Coef, HdCoef, GCoef, DqCoef, VCoef, merchantable,

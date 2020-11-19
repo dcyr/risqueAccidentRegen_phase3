@@ -17,6 +17,7 @@ rm(list = ls()[-which(ls() %in% c("sourceDir", "simInfo", "clusterN"))])
 v120 <- T
 vStanding <- T
 
+
 if(vStanding) {
     psDir <- paste0(sourceDir, "/data/Pothier-Savard")
     source(paste0(psDir, "/Pothier-Savard.R"))

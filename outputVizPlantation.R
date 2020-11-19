@@ -57,6 +57,7 @@ for(s in seq_along(simInfo$simID)) {
     
     matThresh <- data.frame(sp = c("EN", "PG"),
                             matThresh = c(90, 76))
+    
     if(ctDyn) {
         matThresh <- matThresh[matThresh$sp == "PG",]
     }

@@ -3,6 +3,7 @@
 # ##### Compiling outputs
 # ##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
 ####################################################################################################
+# rm(list = ls())
 ####################################################################################################
 sourceDir <- path.expand("~")
 sourceDir <- gsub("\\\\", "/", sourceDir) # necessary on some Windows machine
@@ -45,5 +46,6 @@ clusterN <- 36
 # eval(parse(paste(sourceDir, "outputCompilationHarvest.R", sep = "/"), encoding = 'UTF-8'))
 # eval(parse(paste(sourceDir, "outputCompilationTSD.R", sep = "/"), encoding = 'UTF-8'))
 # eval(parse(paste(sourceDir, "outputCompilationVol.R", sep = "/"), encoding = 'UTF-8'))
-eval(parse(paste(sourceDir, "outputCompilationPlantation.R", sep = "/"), encoding = 'UTF-8'))
+#eval(parse(paste(sourceDir, "outputCompilationPlantation.R", sep = "/"), encoding = 'UTF-8'))
+eval(parse(paste(sourceDir, "outputCompilationRegenRisk.R", sep = "/"), encoding = 'UTF-8'))
 #eval(parse(paste(sourceDir, "outputCompilationVolAt120Trans.R", sep = "/"), encoding = 'UTF-8'))

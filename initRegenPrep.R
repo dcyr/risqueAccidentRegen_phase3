@@ -429,6 +429,8 @@ df[,"seedlings"] <- seedlingFnc(sp = coverTypes_RAT[match(df$coverType, coverTyp
 require("qmap")
 seedlingQMapFit <- fitQmapQUANT(obs = df$IDR100, mod = df$seedlings,  nboot = 1,
                                 qstep = 0.01, wet.day = F)#quantile(df$seedlings, 0.01, na.rm = T))
+save(seedlingQMapFit, file = "seedlingQMapFit.RData")
+
 stored <- append(stored, "seedlingQMapFit")
 
 # ## visualizing quantile mapping function
