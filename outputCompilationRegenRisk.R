@@ -24,13 +24,18 @@ require(raster)
 require(tidyverse)
 #s <- 1
 require(foreach)
-foreach(s = seq_along(simInfo$simID))  %do% {#
-   
+foreach(s = c(1, 2, 4, 5, 6, 7, 10, 13, 15, 17, 18, 19, 21, 22, 23, 24))  %do% {#seq_along(simInfo$simID)
+    require(raster)
+    require(reshape2)
+    require(tidyverse)
+    require(tidyr)
     simDir <- simInfo$simDir[s]
     fr <- simInfo$fire[s]
     mgmt <- simInfo$mgmt[s]
     simID <- simInfo$simID[s]
     ctDyn <- simInfo$ctDyn[s]
+    
+    
     
     ## loading management plan (to fetch commercial cover types )
     managementPlan <- get(load(paste0("../", simDir,"/managementPlan.RData")))
@@ -52,9 +57,18 @@ foreach(s = seq_along(simInfo$simID))  %do% {#
     names(r100Init) <- "rho100_0"
     iqsInit <- raster(paste0("../", simDir, "/iqs.tif"))
 
-   
+    
+    convFactor <- prod(res(r100Init))/10000
+    ########################################################################################################
+    require(doSNOW)
+    require(parallel)
+    
+    # clusterN <- max(1, floor(0.5*detectCores()))  ### choose number of nodes to add to cluster.
+    #######
+    cl = makeCluster(clusterN, outfile = "") ##
+    registerDoSNOW(cl)
     ### looping through replicates
-    rfSummary <- foreach(i = seq_along(files), .combine = "rbind")  %do% {#seq_along(files)
+    rfSummary <- foreach(i = seq_along(files), .combine = "rbind")  %dopar% {#seq_along(files)
      
         require(raster)
         require(reshape2)
@@ -81,7 +95,7 @@ foreach(s = seq_along(simInfo$simID))  %do% {#
         
         ######################################################################
         ######################################################################
-        #### Standing volumes 
+        #### stand attributes volumes  
 
         
         volStandingInit <- raster(paste0("../", simDir, "/output/volInit_", r, ".tif"))
@@ -171,7 +185,7 @@ foreach(s = seq_along(simInfo$simID))  %do% {#
         tmp <- list()
         for (j in 1:ncol(r100)) {#
             
-            if(class(sp) == "data.frame") {
+            if(ctDyn) {
                 x <-  data.frame(sp = sp[,j],
                                  iqs = iqs[,j],
                                  a = a[,j],
@@ -195,17 +209,12 @@ foreach(s = seq_along(simInfo$simID))  %do% {#
     
         
 
-        ########################################################################################################
-        require(doSNOW)
-        require(parallel)
-        
-        # clusterN <- 2
-        # clusterN <- max(1, floor(0.5*detectCores()))  ### choose number of nodes to add to cluster.
+
         #######
-        cl = makeCluster(clusterN, outfile = "") ##
-        registerDoSNOW(cl)
-        #######
-        df <- foreach(j = 1:ncol(r100), .combine = "rbind") %dopar% {#ncol(r100)
+        df <- list()
+        #df <- foreach(j = 1:5, .combine = "rbind") %do% {#ncol(r100)
+        for (j in 1:ncol(r100)) {#
+            
             require(tidyverse)
             y <- j-1
             source(paste0(sourceDir, "/scripts/regenDensityPredictFnc.R"))
@@ -254,12 +263,13 @@ foreach(s = seq_along(simInfo$simID))  %do% {#
             x <- x %>%
                 mutate(year = y)
             
-           return(x)
+           df[[j]] <- x
+           print(paste("done with year", y, "of replicate", r, "of sim", simID)) 
            
         }
-        stopCluster(cl)   
         
-        
+        df <- do.call("rbind", df)
+         
         df <- df %>%
             mutate(simID = simID,
                    fireScenario = fr,
@@ -267,11 +277,13 @@ foreach(s = seq_along(simInfo$simID))  %do% {#
                    replicate = as.numeric(r), 
                    coverType = sp) %>%
             group_by(simID, fireScenario, mgmtScenario, replicate, year, coverType) %>%
-            summarize(regenFailure30 = round(sum(v120PostFire<30)/n(), 3))
+            summarize(regenFailure30 = round(sum(v120PostFire<30)/n(), 3),
+                      area_ha = n()*convFactor)
         print(paste("finished with replicate", r, "of sim", simID))
         return(df)
     
     }
+    stopCluster(cl)
     write.csv(rfSummary, file = paste0("regenFailureSummary_", simID, ".csv"), row.names = F)
     #return(rfSummary)
 }

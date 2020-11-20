@@ -19,7 +19,14 @@ age_extract <- function(r = tsd,
 sp_extract <- function(r = coverTypes,
                        rat = coverTypes_RAT,
                        stands = index) {
-    x <- rat[match(r[stands], rat$ID), "value"]
+    x <- r[stands]
+    class(x)
+    if(class(x) == "matrix") {
+        x <- apply(x, 2, function(x) rat[match(x, rat$ID), "value"])    
+    } else {
+        x <- rat[match(x, rat$ID), "value"]    
+    }
+    
     return(x)
 }
 
