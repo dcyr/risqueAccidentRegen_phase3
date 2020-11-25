@@ -49,3 +49,11 @@ Celui-ci est assez évident: contient les superficies (area_ha) par chaque combi
 outputCompiledVolAt120Mean.csv 
 ###############################
 Idem pour les valeurs de productivité potentielle moyenne à l'échelle du paysage.
+
+###############################
+outputCompiledRegenFailureVuln_summary
+###############################
+Contient un sommaire de l'évolution de la vulnérabilité aux accidents de régénération du territoire à l'étude, défini comme comme vulnérable à une régénération post-feu produisant un peuplement ayant un potentiel inférieure à 30 m3/ha @ 120 ans.
+coverType: Indique s'il s'agit de EN, PG ou encore une moyenne des deux, pondérée en fonction de la superficie occupée par chacun des types de couvert.
+regenFailureVulnMean: Les moyennes pondérée finales pour l'ensemble de EN + PG sont calculées à partir des simulations individuelles, et ne correspondent pas parfaitement à celles calculées à partir des superficies rapportées ici pour EN et PG, qui constituent, à titre indicatif, une moyenne de l'ensemble des réplicats.
+

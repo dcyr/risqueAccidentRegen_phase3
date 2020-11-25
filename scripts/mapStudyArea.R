@@ -1,9 +1,15 @@
-rm(list = ls())
-setwd("~/Travail/SCF/regenFailureRiskAssessment/")
+##################################################################################################
+###################################################################################################
+##### Visualizing outputs
+##### Dominic Cyr, in collaboration with Tadeusz Splawinski, Sylvie Gauthier, and Jesus Pascual Puigdevall
+home <- path.expand("~")
+home <- gsub("\\\\", "/", home) # necessary on some Windows machine
+home <- gsub("/Documents", "", home) # necessary on my Windows machine
+setwd(paste(home, "Sync/Travail/ECCC/regenFailureRiskAssessment_phase3/", sep ="/"))
+####################################################################################################
 wwd <- paste(getwd(), Sys.Date(), sep = "/")
 dir.create(wwd)
 setwd(wwd)
-rm(wwd)
 
 require(raster)
 require(ggmap)
@@ -18,21 +24,21 @@ studyAreaP <- get(load("../data/studyAreaP.RData"))
 fireZonesP <- readOGR(dsn = "../gis", layer = "fireZones_Gauthier2015")
 limiteNordique <- readOGR(dsn = "../gis", layer = "LIM_FOR_ATT_2018")
 
-#### fire, if necessary
-NFDB_poly <- readOGR(dsn = path.expand("~/Travail/GIS/feux/LFDB/shapefile_2017/"),
-                     layer = "NFDB_poly_20170928")
-### subsetting
-years <- c(1980, 2015)
-minSize <- 200 # in ha
-#
-index <- which(NFDB_poly$YEAR >= min(years) &
-                   NFDB_poly$YEAR <= max(years) &
-                   NFDB_poly$CFS_HA >= minSize)
-NFDB_subset <- NFDB_poly[index,]
-NFDB_subset <- spTransform(NFDB_subset, crsWorking) ### projection
-#NFDB_poly <- spTransform(NFDB_poly, crsWorking) ### projection
-NFDB_subset <- tidy(NFDB_subset)
-NFDB_subset[,"variable"] <- paste0("Feux récents (", years[1], "-", years[2], ")")
+# #### fire, if necessary
+# NFDB_poly <- readOGR(dsn = path.expand("~/Travail/GIS/feux/LFDB/shapefile_2017/"),
+#                      layer = "NFDB_poly_20170928")
+# ### subsetting
+# years <- c(1980, 2015)
+# minSize <- 200 # in ha
+# #
+# index <- which(NFDB_poly$YEAR >= min(years) &
+#                    NFDB_poly$YEAR <= max(years) &
+#                    NFDB_poly$CFS_HA >= minSize)
+# NFDB_subset <- NFDB_poly[index,]
+# NFDB_subset <- spTransform(NFDB_subset, crsWorking) ### projection
+# #NFDB_poly <- spTransform(NFDB_poly, crsWorking) ### projection
+# NFDB_subset <- tidy(NFDB_subset)
+# NFDB_subset[,"variable"] <- paste0("Feux récents (", years[1], "-", years[2], ")")
 
 # Canada (provinces)
 can1 <- getData('GADM', country="CAN", level=1)  ## level 1: provinces

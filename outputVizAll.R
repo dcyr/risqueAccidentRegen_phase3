@@ -48,5 +48,7 @@ simInfo <- list(simID = simInfo$id,
 # eval(parse(paste("../outputVizHarvest.R", sep = "/"), encoding = 'UTF-8'))
 # eval(parse(paste("../outputVizVolAt120.R", sep = "/"), encoding = 'UTF-8'))
 # eval(parse(paste(sourceDir, "outputVizAge.R", sep = "/"), encoding = 'UTF-8'))
-eval(parse(paste(sourceDir, "outputVizPlantation.R", sep = "/"), encoding = 'UTF-8'))
+# eval(parse(paste(sourceDir, "outputVizPlantation.R", sep = "/"), encoding = 'UTF-8'))
+# eval(parse(paste(sourceDir, "outputVizRegenRisk.R", sep = "/"), encoding = 'UTF-8'))
+eval(parse(paste(sourceDir, "studyAreaSummary.R", sep = "/"), encoding = 'UTF-8'))
 # eval(parse(paste(sourceDir, "resultsTransitionMatrix.R", sep = "/"), encoding = 'UTF-8')) 

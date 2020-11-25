@@ -24,7 +24,7 @@ require(raster)
 require(tidyverse)
 #s <- 1
 require(foreach)
-foreach(s = c(1, 2, 4, 5, 6, 7, 10, 13, 15, 17, 18, 19, 21, 22, 23, 24))  %do% {#seq_along(simInfo$simID)
+foreach(s = c(3, 5, 7, 8, 9, 11, 12, 14, 16, 18, 20, 22, 24))  %do% {#seq_along(simInfo$simID)
     require(raster)
     require(reshape2)
     require(tidyverse)
@@ -40,6 +40,8 @@ foreach(s = c(1, 2, 4, 5, 6, 7, 10, 13, 15, 17, 18, 19, 21, 22, 23, 24))  %do% {
     ## loading management plan (to fetch commercial cover types )
     managementPlan <- get(load(paste0("../", simDir,"/managementPlan.RData")))
     plan <- managementPlan[["baseline"]] 
+    retention <- plan$retentionCut
+    
     files <- list.files(paste0("../", simDir,"/output"))
     index <- grep(".RData", files)
     index <- intersect(index, grep("outputVolAt120", files))
@@ -68,7 +70,7 @@ foreach(s = c(1, 2, 4, 5, 6, 7, 10, 13, 15, 17, 18, 19, 21, 22, 23, 24))  %do% {
     cl = makeCluster(clusterN, outfile = "") ##
     registerDoSNOW(cl)
     ### looping through replicates
-    rfSummary <- foreach(i = seq_along(files), .combine = "rbind")  %dopar% {#seq_along(files)
+    rfSummary <- foreach(i = seq_along(files), .combine = "rbind")  %dopar% {#
      
         require(raster)
         require(reshape2)
@@ -76,6 +78,7 @@ foreach(s = c(1, 2, 4, 5, 6, 7, 10, 13, 15, 17, 18, 19, 21, 22, 23, 24))  %do% {
         require(tidyr)
         
         r <- replicates[i]
+        
         
         ## could be outside this loop at the moment, but will eventually be dynamics
         ## will need to be dynamics when covertypes will be dynamics
@@ -94,11 +97,40 @@ foreach(s = c(1, 2, 4, 5, 6, 7, 10, 13, 15, 17, 18, 19, 21, 22, 23, 24))  %do% {
         ctVal <- values(coverTypes)
         
         ######################################################################
+        #### retention cut
+        if (retention) {
+            retenTarget <- plan$retentionCutTarget
+            reten <- get(load(paste0("../", simDir, "/output/outputVolReten_", r, ".RData")))
+            fire <- get(load(paste0("../", simDir, "/output/outputFire_", r, ".RData")))
+            
+            for (j in 1:nlayers(reten)) {
+                if(j == 1) {
+                    rVol <- reten[[j]]
+                    rVol <- rVol>0
+                    rVol <- stack(rVol, rVol)
+                    rVol[is.na(rVol)] <- 0
+                    rVol[[1]][] <- 0
+                } else {
+                    tmp <- reten[[j]]
+                    tmp <- tmp>0
+                    tmp <- rVol[[j]] | tmp > 0
+                    tmp[fire[[j]]] <- 0
+                    tmp[is.na(tmp)] <- 0
+                    rVol <- stack(rVol, tmp)
+                }
+                
+            }
+            names(rVol) <- paste0("reten_", 1:nlayers(rVol))
+            
+        }
+        ######################################################################
+      
+        ######################################################################
         ######################################################################
         #### stand attributes volumes  
 
         
-        volStandingInit <- raster(paste0("../", simDir, "/output/volInit_", r, ".tif"))
+        #volStandingInit <- raster(paste0("../", simDir, "/output/volInit_", r, ".tif"))
         
         age <- get(load(paste0("../", simDir, "/output/outputTSD_", r, ".RData")))
         age <- stack(ageInit, age)
@@ -117,11 +149,12 @@ foreach(s = c(1, 2, 4, 5, 6, 7, 10, 13, 15, 17, 18, 19, 21, 22, 23, 24))  %do% {
             for(y in 1:nlayers(rho100)) {
                 if(y == 1) {
                     iqs <- iqsInit
-                    
+   
                 } else {
                     tmp <- iqs[[y-1]] 
                     index <- which(ctVal[,y-1] != ctVal[,y])
-                    tmp[index] <- iqs_PG[index]    
+                    tmp[index] <- iqs_PG[index]
+                    
                     iqs <- stack(iqs, tmp)
                 }
             }
@@ -139,19 +172,32 @@ foreach(s = c(1, 2, 4, 5, 6, 7, 10, 13, 15, 17, 18, 19, 21, 22, 23, 24))  %do% {
             x <- which(!is.na(ctVal))    
         }
         
-        volInit <- values(volStandingInit)[x]
+        
+        #volInit <- values(volStandingInit)[x]
        
         sp <- sp_extract(r = coverTypes,
                          stands = x)
        
         iqs <- iqs_extract(r = iqs,
                            stands = x)
+        iqs[is.na(iqs)] <- 0 ## replacing NA (very few) by zeros, assuming non-productive stands
+        
+        
         a <- age_extract(r = age,
                          stands = x)
         
                  
         r100 <- IDR100_extract(r = rho100,
                                stands = x)
+        
+        if(retention) {
+          retenVals <- values(rVol)
+          retentionIndex <- list()
+          for (j in 1:nlayers(rVol)) {
+            retenIndex <- which(retenVals[,j] == 1)
+            retentionIndex[[j]] <- which(x %in% retenIndex)
+          }
+        }
         
        
         ###
@@ -224,8 +270,11 @@ foreach(s = c(1, 2, 4, 5, 6, 7, 10, 13, 15, 17, 18, 19, 21, 22, 23, 24))  %do% {
             print(paste("extracting year", y, "of replicate", r, "of sim", simID)) 
             
             x <- tmp[[j]]
-            index <- x$sp %in% c("EN", "PG")
-            
+            index <- which(x$sp %in% c("EN", "PG"))
+            if(retention) {
+              retenIndex <- retentionIndex[[j]]
+              retenIndex <- which(index %in% retentionIndex[[j]])
+            }
             x <- x[index,]
             
             x[,"G"] <- g_extract(sp = x$sp,
@@ -258,6 +307,12 @@ foreach(s = c(1, 2, 4, 5, 6, 7, 10, 13, 15, 17, 18, 19, 21, 22, 23, 24))  %do% {
                                      DqCoef = DqCoef, VCoef = VCoef, merchantable = T,
                                      scenesCoef = NULL, withSenescence = F),
                                 1)
+           if(retention) {
+             x[retenIndex, "v120PostFire"] <- ifelse(x[retenIndex, "v120PostFire"] > 30,
+                                            x[retenIndex, "v120PostFire"], 30)  
+           }
+           
+           
            x[, "simID"] <- simID
            
             x <- x %>%
@@ -284,7 +339,7 @@ foreach(s = c(1, 2, 4, 5, 6, 7, 10, 13, 15, 17, 18, 19, 21, 22, 23, 24))  %do% {
     
     }
     stopCluster(cl)
-    write.csv(rfSummary, file = paste0("regenFailureSummary_", simID, ".csv"), row.names = F)
+    write.csv(rfSummary, file = paste0("outputCompiledRegenFailure_", simID, ".csv"), row.names = F)
     #return(rfSummary)
 }
 
