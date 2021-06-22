@@ -11,7 +11,6 @@ require(reshape2)
 
 harvTarget <- output <- list()
 for (s in seq_along(simInfo$simID)) {
-    
     simID <- simInfo$simID[s]
     simDir <- paste0(rawOutputDir, simInfo$simDir[s])
     fr <- simInfo$fire[s]
@@ -390,12 +389,12 @@ for(v in seq_along(varNames)) {
 #                #subtitle = paste0(percentile, "e percentile"),
 #                subtitle = paste0("Full lines and ribbons represent averages and 25th and 75th percentiles\n",
 #                                  "Dotted lines represent 10th percentiles"),
-#                # caption = paste0("Àge min. de récolte (sauf récup.) - Épinette noire: 90 ans\n",
+#                # caption = paste0("?ge min. de r?colte (sauf r?cup.) - ?pinette noire: 90 ans\n",
 #                #                  "Pin gris: 76 ans\n",
-#                #                  "Vol. marchand min.: 50 m3/ha (Récup.: 70 m3/ha)\n",
+#                #                  "Vol. marchand min.: 50 m3/ha (R?cup.: 70 m3/ha)\n",
 #                #                  "Cycle des feux - baseline: 104 ans\n"),
 #                #"Min vieilles forÃªts (>=100 ans): 14%\n",
-#                #"Max régén. (< 20 ans): 35%"),
+#                #"Max r?g?n. (< 20 ans): 35%"),
 #                x = "",
 #                y = "Proportion of salvage logging\n(% of total area harvested)\n"))
 # 

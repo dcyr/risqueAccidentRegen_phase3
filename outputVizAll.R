@@ -18,11 +18,13 @@ setwd(wwd)
 require(readxl)
 #simInfo <- read_excel("./docs/scenTable.xlsx", sheet = 1)
 simInfo <- read.csv("../docs/scenTable.csv",
-                    colClasses=c("id"="character"))
+                    colClasses=c("simID"="character",
+                                 "id_ms"="character"))
 #simInfo <- simInfo[1:12,]
 
-simInfo <- list(simID = simInfo$id,
-                simDir =  paste0("sim_", simInfo$id),
+simInfo <- list(simID = simInfo$simID,
+                id_ms = simInfo$id_ms,
+                simDir =  paste0("sim_", simInfo$simID),
                 fire = simInfo$fireScenario,
                 mgmt = simInfo$mgmtScenario,
                 ctDyn = ifelse(simInfo$plantPostFireSp == "PG" |
@@ -36,6 +38,10 @@ simInfo <- list(simID = simInfo$id,
                 plantPostFireSp = simInfo$plantPostFireS,
                 plantLimitedAccess = simInfo$plantLimitedAccess)
 
+id_ms <- unique(simInfo[["id_ms"]])
+id_ms <- id_ms[order(id_ms)] 
+id_ms <- id_ms[!is.na(as.numeric(id_ms))]
+simInfo[["id_ms"]] <- factor(simInfo[["id_ms"]] , levels = id_ms)
 
 ####################################################################################################
 
@@ -44,11 +50,15 @@ simInfo <- list(simID = simInfo$id,
 ####################################################################################################
 ####################################################################################################
 ## use eval() and parse() instead of source() to deal with special character under Windows.
+eval(parse(paste("../outputVizRegenRisk.R", sep = "/"), encoding = 'UTF-8'))
+eval(parse(paste("../outputVizVolAt120_ms.R", sep = "/"), encoding = 'UTF-8'))
+eval(parse(paste("../outputVizHarvest_ms.R", sep = "/"), encoding = 'UTF-8'))
+eval(parse(paste("../outputTable_ms.R", sep = "/"), encoding = 'UTF-8'))
 # eval(parse(paste("../outputVizFire.R", sep = "/"), encoding = 'UTF-8'))
 # eval(parse(paste("../outputVizHarvest.R", sep = "/"), encoding = 'UTF-8'))
 # eval(parse(paste("../outputVizVolAt120.R", sep = "/"), encoding = 'UTF-8'))
 # eval(parse(paste(sourceDir, "outputVizAge.R", sep = "/"), encoding = 'UTF-8'))
 # eval(parse(paste(sourceDir, "outputVizPlantation.R", sep = "/"), encoding = 'UTF-8'))
 # eval(parse(paste(sourceDir, "outputVizRegenRisk.R", sep = "/"), encoding = 'UTF-8'))
-eval(parse(paste(sourceDir, "studyAreaSummary.R", sep = "/"), encoding = 'UTF-8'))
+# eval(parse(paste(sourceDir, "studyAreaSummary.R", sep = "/"), encoding = 'UTF-8'))
 # eval(parse(paste(sourceDir, "resultsTransitionMatrix.R", sep = "/"), encoding = 'UTF-8')) 

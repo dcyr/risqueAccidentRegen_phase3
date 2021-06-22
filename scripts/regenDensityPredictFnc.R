@@ -19,7 +19,6 @@ propConesFnc <- function(sp, iqs, Ac, tCoef) {
     # Black spruce: polynomial approximation based on Viglas et al 2013
     index <- which(.sp == "EN")
     .a <- as.data.frame(.age[index])
-    #foo <- apply(.a, 1, function(x) 1.93839E-07*x[1]^3 - -0.000103703*x[1]^2 + 0.018378091*x[1] - 0.083051941)
     x[index] <- apply(.a, 1, function(x) 0.0000002*x[1]^3 - 0.0001*x[1]^2 + 0.0184*x[1] -0.0831 )
     
     ####### 

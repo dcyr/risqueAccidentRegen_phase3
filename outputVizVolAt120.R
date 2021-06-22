@@ -95,7 +95,7 @@ write.csv(outputMean, file = "outputCompiledVolAt120Mean.csv", row.names = F)
 #lvls <- levels(outputCompiled$volAt120Cls)
 #outputCompiled[outputCompiled$volAt120Cls == "N/A", "volAt120Cls"] <- lvls[1]
 
-nSims <- nrow(distinct(outputCompiled, fireScenario, mgmtScenario, replicate))
+#nSims <- nrow(distinct(outputCompiled, fireScenario, mgmtScenario, replicate))
 
 
 df <- output %>%
@@ -203,22 +203,12 @@ colList <- list("Clearcutting" =
                        caption = c("Note: With salvage logging, planting in all post-fire\nregen failure; no access constrains\n\n"),
                        colour =c("black", "firebrick2", "orange4", "orange1", "skyblue4", "skyblue2", "black")))
 
-# No harvests / No post-fire interventions" = ,
-#                                         "Clearcutting" = "orangered4",
-#                                         "Variable retention harvest" = "dodgerblue4"),
-#                 "Post-Fire Intervention" = c("No harvests / No post-fire interventions" = "seagreen",
-#                                              "Harvests / No post-fire interventions" = "dodgerblue4",
-#                                              "No salv. logging / Post-fire planting" = "orangered2",
-#                                              "Salv. logging / Post-fire planting" = "orangered4"),
-#                 "Planted species" = c("Pre-fire composition (<2 km)" = "darkslategrey",
-#                                       "Pre-fire composition" = "darkslategray3",
-#                                       "Jack Pine (<2 km)" = "tan",
-#                                       "Jack Pine" = "peru",
-#                                       "N/A (No planting)" = "grey"))
+
 
 yMax <- 5*(ceiling(  100*max(df$p50VolAt120Area_ha/areaTotal)/5))
 pMean <- list()
 for (i in seq_along(colList)) {
+
     options(scipen=999)
     sID <- colList[[i]]$simID
     scen <- gsub(" |\\.", "", colList[[i]]$scenario)
@@ -239,7 +229,7 @@ for (i in seq_along(colList)) {
              plotLvl = factor(plotLvl, levels = labels),
              #cols = ifelse(!is.na(plotLvl),
              #              cols[match(simID, sID)], tail(cols, 1)),
-             size = ifelse(is.na(plotLvl), 0.25,
+             size = ifelse(is.na(plotLvl), 0.5,
                            ifelse(plotLvl == "Clearcutting only", 1.5, 1)),
              alpha = ifelse(is.na(plotLvl), 0.25, 1),
              linetype =  linetype[match(fireScenario, names(linetype))])
@@ -248,7 +238,7 @@ for (i in seq_along(colList)) {
       mutate(plotLvl = ifelse(simID %in% sID, labels[match(simID, sID)],
                               ""),
              plotLvl = factor(plotLvl, levels = labels),
-             size = ifelse(is.na(plotLvl), 0.25,
+             size = ifelse(is.na(plotLvl), 0.5,
                            ifelse(plotLvl == "Clearcutting only", 1.5, 1)),
              alpha = ifelse(is.na(plotLvl), 0.25, 1),
              linetype =  linetype[match(fireScenario, names(linetype))])
@@ -275,8 +265,8 @@ for (i in seq_along(colList)) {
       scale_colour_manual("",
                           values = cols, #c("grey", cols),
                           labels = labels,
-                          na.translate = F,
-                          guide = guide_legend(nrow = length(unique(plotMean$plotLvl)))) +
+                          na.translate = T) +
+                          #guide = guide_legend(nrow = length(unique(plotMean$plotLvl)))) +
       scale_fill_manual(values = cols) +
       labs(subtitle = paste0(letters[i], ") ", plotName, "\n"),
            caption = caption,
@@ -384,8 +374,8 @@ print((pMean[[1]] + pMean[[2]] + pMean[[3]]) /
           theme = theme(
             plot.title = element_text(size = rel(1.5)),
             plot.caption = element_text(size = rel(.8), hjust = 0))
-          
-        ) 
+
+        )
 )
 dev.off()
     

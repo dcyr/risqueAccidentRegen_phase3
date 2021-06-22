@@ -6,8 +6,9 @@ rm(list = ls()[-which(ls() %in% c("sourceDir", "simInfo", "rawOutputDir"))])
 #################
 require(raster)
 require(ggplot2)
-require(dplyr)
-require(reshape2)
+require(tidyverse)
+require(survival)
+
 # 
 # require(doSNOW)
 # require(parallel)
@@ -41,13 +42,12 @@ for(s in seq_along(simInfo$simID)) {
     
     outputCompiled <- get(load(f))
     
-    
     #breaks <- seq(0, 150, by = 10)
     
     df <- outputCompiled %>%
         mutate(surv = int > matThresh | cens == 0)
     
-    require(survival)
+    
     
     time <- df$int
     cens <- df$cens
@@ -96,7 +96,7 @@ for(s in seq_along(simInfo$simID)) {
                  survProbWeib = survProbWeib) %>%
         mutate(survProbExp = ifelse(fire == "RCP 8.5", NA, survProbExp),
                survProbWeib = ifelse(fire == "RCP 8.5", NA, survProbWeib)) %>%
-        select(simID, fire, mgmt, cycleExp, cycleWeib,
+        dplyr::select(simID, fire, mgmt, cycleExp, cycleWeib,
                plantedSp, matThresh,
                survProbExp, survProbWeib, survProbSim)
     
@@ -112,7 +112,7 @@ out[, c("survProbExp", "survProbWeib", "survProbSim")] <-  round(out[, c("survPr
 out[out$fire == "Baseline", "survProbBaseline"] <-  round(pexp(q = out[out$fire ==  "Baseline", "matThresh"],
                                                                rate = 1/101, lower.tail = F), 3)
 
-write.csv(out, file = "outputPlantationSurv.csv", row.names = F)
+write.csv(out, file = "outputPlantationSurvSummary.csv", row.names = F)
 # pexp(q = 90, rate = 1/101, lower.tail = F)
 
 
