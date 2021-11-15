@@ -40,7 +40,6 @@ costAccessCap <-  75000000
 
 ##### focusing of selected simulations
 df <- filter(harv, !is.na(id_ms))
-
 ##### computing royalties and costs
 df <- df %>%
     mutate(harvestTotal_cubMeters =  harvestVol_cubMeters + salvVol_cubMeters,
@@ -48,7 +47,6 @@ df <- df %>%
            costPl_perHa = ifelse(plantPostFireSp == "same", costPlSpp,
                                  ifelse(plantPostFireSp == "PG",  costPlJp, NA)),
            costPl = costPl_perHa * (plantPostSalv_ha + plantPostFire_ha),
-           #costPl = costPl_perHa (plantPostFire_ha),
            costPl = ifelse(is.na(costPl), 0, costPl),
            costAccessTot = costAccess * (plantPostFire_ha * plantPostSalv_ha) * propInaccess,### 
            costTotal = costPl + costAccessTot,
@@ -93,31 +91,35 @@ write.csv(dfSummary, file = "harvSummary.csv", row.names = F)
 
 
 colList <- list("MS" =
-                    list(scenario = "Baseline",
-                         id_ms = c("02", "03", "04", "05", "06", "07", "08", "09"),
-                         labels = c("Clearcutting + post-fire salv.",
-                                    "Var. retention + post-fire salv.",
-                                    "Clearcutting + replanting / limited access",
-                                    "Clearcutting + replanting / limited access - Jack Pine",
-                                    "Var. retention + replanting / limited access",
-                                    "Var. retention + replanting / limited access - Jack Pine",
-                                    "Clearcutting + replanting / full access",
-                                    "Clearcutting + replanting / full access - Jack Pine"),
-                         caption = c("Selected scenarios"),
-                         colour =c("black",
-                                   "mediumpurple4",
-                                   "skyblue4",
-                                   "goldenrod4",
-                                   "mediumpurple2",
-                                   "goldenrod2",
-                                   "skyblue2",
-                                   "goldenrod1")),
+                  list(scenario = "Baseline",
+                       id_ms = c("02", "03", "04", "05", "06", "07", "08", "09"),
+                       labels = c("Clearcutting + post-fire salv.",
+                                  "Var. retention + post-fire salv.",
+                                  "Clearcutting + replanting / existing access",
+                                  "Clearcutting + replanting / existing access - Jack Pine",
+                                  "Var. retention + replanting / existing access",
+                                  "Var. retention + replanting / existing access - Jack Pine",
+                                  "Clearcutting + replanting / full access",
+                                  "Clearcutting + replanting / full access - Jack Pine"),
+                       caption = c("Selected scenarios"),
+                       colour =c("black",
+                                 "mediumpurple4",
+                                 "skyblue4",
+                                 "goldenrod4",
+                                 "mediumpurple2",
+                                 "goldenrod2",
+                                 "skyblue2",
+                                 "goldenrod1",
+                                 "black")),
                 "SuppMat" = 
-                    list(scenario = "Baseline",
-                         id_ms = unique(df$id_ms),
-                         labels = "",
-                         caption = "All scenarios",
-                         colour = rep("black", length.out = length(unique(df$id_ms)))))
+                  list(scenario = "Baseline",
+                       id_ms = unique(df$id_ms),
+                       labels = "",
+                       caption = "All scenarios",
+                       colour = rep("black", length.out = length(unique(df$id_ms)))))
+
+
+
 
 
 # colList <- list("MS" =
@@ -142,32 +144,45 @@ colList <- list("MS" =
 
 
 for (i in seq_along(colList)) {
-    options(scipen=5)
-    sID <- colList[[i]]$id_ms
-    scen <- gsub(" |\\.", "", colList[[i]]$scenario)
-    labels <- colList[[i]]$labels
-    labels <- factor(paste(labels, paste0("(S", sID, ")")))
-    labels <- factor(labels, levels = as.character(labels))
-    plotName <- names(colList)[[i]]
-    cols <- colList[[i]]$colour
-    
-    linetype <- c("Baseline" = 1, "RCP 8.5" = 3)
-    caption <- colList[[i]]$caption
+  
+  options(scipen=999)
+  sID <- colList[[i]]$id_ms
+  scen <- gsub(" |\\.", "", colList[[i]]$scenario)
+  labels <- colList[[i]]$labels
+  labels <- factor(paste(labels, paste0("(S", sID, ")")))
+  labels <- factor(labels, levels = as.character(labels))
+  plotName <- names(colList)[[i]]
+  cols <- colList[[i]]$colour
+  
+  linetype <- c("Baseline" = 1, "RCP 8.5" = 3)
+  naLbl <- "Various scenarios simulated under projected fire regime (S10-15)"
+  labLvls <- c(levels(labels),naLbl)
+  labels <- factor(labLvls, levels = labLvls)
+  
+  caption <- colList[[i]]$caption
+  
+  if(names(colList)[i] == "MS") {
     names(cols) <- labels
-    
-    
-    ### producing dataframes
-    plotVol <- dfSummary %>%
-        mutate(plotLvl = labels[match(id_ms, sID)],
-               size = ifelse(names(colList)[[i]] == "SuppMat", 1,
-                             ifelse(is.na(plotLvl), 0.5,
-                                    ifelse(plotLvl == "Clearcutting + post-fire salv. (sim02)", 2, 1.5))),
-               alpha = ifelse(is.na(plotLvl), 0.35, 1),
-               linetype =  linetype[match(fireScenario, names(linetype))])
-    
+  }
 
-    plotRibbon <- plotVol %>%
-        filter(!is.na(plotLvl))
+  
+  ### producing dataframes
+  plotVol <- dfSummary %>%
+    
+    mutate(plotLvl = factor(labels[match(id_ms, sID)]),
+           plotLvl = ifelse(is.na(plotLvl), naLbl, plotLvl),
+           plotLvl = factor(plotLvl, levels = levels(labels)),
+           size = ifelse(plotLvl == naLbl, 0.5,
+                         ifelse(plotLvl == "Clearcutting only", 2, 1.5)),
+           alpha = ifelse(plotLvl == naLbl, 1, 1),
+           linetype =  linetype[match(fireScenario, names(linetype))])
+  plotVol[grepl("full access", plotVol$plotLvl), "linetype"] <- 3
+    
+    
+  
+
+  plotRibbon <- plotVol %>%
+      filter(plotLvl != naLbl)
 
     
     yLim <- c(-600, 500)
@@ -178,10 +193,10 @@ for (i in seq_along(colList)) {
         filter(year == max(year)) %>%
         mutate(yearH = year,
                label = paste0("S", id_ms),
-               hjust = ifelse(is.na(plotLvl), -0.05, -0.05),
-               vjust = ifelse(is.na(plotLvl), -0.05, -0.05),
-               alpha = ifelse(is.na(plotLvl), 1, 1),
-               size = ifelse(is.na(plotLvl), 4, 6)) %>%
+               hjust = ifelse(plotLvl == naLbl, -0.05, -0.05),
+               vjust = ifelse(plotLvl == naLbl, -0.05, -0.05),
+               alpha = ifelse(plotLvl == naLbl, 1, 1),
+               size = ifelse(plotLvl == naLbl, 4, 6)) %>%
         ungroup() %>%
         select(id_ms, simID, yearH,
                harvestTotalCumSum_cubMeters_mean,
@@ -193,10 +208,10 @@ for (i in seq_along(colList)) {
         filter(year == max(year)) %>%
         mutate(yearR = year,
                label = paste0("S", id_ms),
-               hjust = ifelse(is.na(plotLvl), -0.05, -0.05),
-               vjust = ifelse(is.na(plotLvl), -0.05, -0.05),
-               alpha = ifelse(is.na(plotLvl), 1, 1),
-               size = ifelse(is.na(plotLvl), 4, 6)) %>%
+               hjust = ifelse(plotLvl == naLbl, -0.05, -0.05),
+               vjust = ifelse(plotLvl == naLbl, -0.05, -0.05),
+               alpha = ifelse(plotLvl == naLbl, 1, 1),
+               size = ifelse(plotLvl == naLbl, 4, 6)) %>%
         ungroup() %>%
         mutate(netReturn_mean = ifelse(year<max(year), yLim[1]*1000000,
                                        netReturn_mean)) %>%
@@ -240,20 +255,26 @@ for (i in seq_along(colList)) {
              x = "",
              y = "Cumulative harvested volume\n") +
         scale_y_continuous(label = unit_format(unit = "M cub-m")) +
-        theme(legend.position = "bottom",
-              legend.title=element_blank(),
-              legend.text = element_text(size = rel(1.1)),
-              legend.key.width = unit(1.5,"cm"),
-              axis.text.x = element_text(angle = 45, hjust = 1, size = rel(1.5)),
-              axis.text.y = element_text(size = rel(1.5)),
-              axis.title = element_text(size = rel(1.5)),
-              plot.subtitle = element_text(size = rel(.9)),
-              plot.caption = element_text(size = rel(.75), hjust = 1)) +
+      theme(legend.position = "bottom",
+            legend.title=element_blank(),
+            legend.text = element_text(size = rel(1)),
+            legend.key.width = unit(1.5,"cm"),
+            axis.text.x = element_text(angle = 45, hjust = 1, size = rel(1.5)),
+            axis.text.y = element_text(size = rel(1.5)),
+            axis.title = element_text(size = rel(1.5)),
+            plot.subtitle = element_text(size = rel(1)),
+            plot.caption = element_text(size = rel(.75), hjust = 1))
+    
+    
+    if(names(colList)[[i]] == "MS") {
+      pHarv <-  pHarv +
         guides(colour = guide_legend(nrow = 5,
-                                     override.aes = list(size = c(rep(2, length(labels)), 0.5),
-                                                         alpha = c(rep(1, length(labels)), 0.25))))
-
-  
+                                     override.aes = list(size = c(rep(2, length(sID)), 0.5),
+                                                         alpha = c(rep(1, length(sID)), 1),
+                                                         linetype = c(ifelse(grepl("full access", labels)|
+                                                                               labels == naLbl, 3, 1)))))
+    }
+        
 
     pReturn <- ggplot(data = plotVol, aes(x = yearInit + year,
                                              y = netReturn_mean/1000000, 
@@ -293,16 +314,32 @@ for (i in seq_along(colList)) {
                            #breaks = breaks/1000, minor_breaks = minorBreaks/1000) +
         theme(legend.position = "bottom",
               legend.title=element_blank(),
-              legend.text = element_text(size = rel(1.1)),
+              legend.text = element_text(size = rel(1)),
               legend.key.width = unit(1.5,"cm"),
               axis.text.x = element_text(angle = 45, hjust = 1, size = rel(1.5)),
               axis.text.y = element_text(size = rel(1.5)),
               axis.title = element_text(size = rel(1.5)),
-              plot.subtitle = element_text(size = rel(.9)),
-              plot.caption = element_text(size = rel(.75), hjust = 1)) +
+              plot.subtitle = element_text(size = rel(1)),
+              plot.caption = element_text(size = rel(.75), hjust = 1))
+    
+    if(names(colList)[[i]] == "MS") {
+      pHarv <-  pHarv +
         guides(colour = guide_legend(nrow = 5,
-                                     override.aes = list(size = c(rep(2, length(labels)), 0.5),
-                                                         alpha = c(rep(1, length(labels)), 0.25))))
+                                     override.aes = list(size = c(rep(2, length(sID)), 0.5),
+                                                         alpha = c(rep(1, length(sID)), 1),
+                                                         linetype = c(ifelse(grepl("full access", labels)|
+                                                                               labels == naLbl, 3, 1)))))
+      
+      pReturn <-  pReturn +
+        guides(colour = guide_legend(nrow = 5,
+                                     override.aes = list(size = c(rep(2, length(sID)), 0.5),
+                                                         alpha = c(rep(1, length(sID)), 1),
+                                                         linetype = c(ifelse(grepl("full access", labels)|
+                                                                               labels == naLbl, 3, 1)))))
+    }
+    
+    
+    
     
     if(names(colList)[[i]] == "SuppMat") {
         pHarv <- pHarv +

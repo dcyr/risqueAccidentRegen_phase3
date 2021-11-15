@@ -11,7 +11,6 @@ require(ggplot2)
 require(dplyr)
 require(reshape2)
 require(stringr)
-# initYear <- 2015
 # ####################################################################
 # ####################################################################
 # ######
@@ -70,10 +69,10 @@ colList <- list("MS" =
                        labels = c("No harvests",
                                   "Clearcutting + post-fire salv.",
                                   "Var. retention + post-fire salv.",
-                                  "Clearcutting + replanting / limited access",
-                                  "Clearcutting + replanting / limited access - Jack Pine",
-                                  "Var. retention + replanting / limited access",
-                                  "Var. retention + replanting / limited access - Jack Pine",
+                                  "Clearcutting + replanting / existing access",
+                                  "Clearcutting + replanting / existing access - Jack Pine",
+                                  "Var. retention + replanting / existing access",
+                                  "Var. retention + replanting / existing access - Jack Pine",
                                   "Clearcutting + replanting / full access",
                                   "Clearcutting + replanting / full access - Jack Pine"),
                        caption = c("Selected scenarios"),
@@ -85,7 +84,8 @@ colList <- list("MS" =
                                  "mediumpurple2",
                                  "goldenrod2",
                                  "skyblue2",
-                                 "goldenrod1")),
+                                 "goldenrod1",
+                                 "black")),
                 "SuppMat" = 
                   list(scenario = "Baseline",
                        id_ms = unique(df$id_ms),
@@ -114,24 +114,32 @@ for (i in seq_along(colList)) {
     cols <- colList[[i]]$colour
     
     linetype <- c("Baseline" = 1, "RCP 8.5" = 3)
+    naLbl <- "Various scenarios simulated under projected fire regime (S10-15)"
+    labLvls <- c(levels(labels),naLbl)
+    #levels(labels) <- c(levels(labels),naLbl)
+    labels <- factor(labLvls, levels = labLvls)
+    
     caption <- colList[[i]]$caption
-    names(cols) <- labels
     
+    if(names(colList)[i] == "MS") {
+      names(cols) <- labels
+    }
     
-       
-    
+ 
     ### producing dataframes
     plotMean <- df %>%
         filter(coverType == "EN + PG") %>%
         mutate(plotLvl = factor(labels[match(id_ms, sID)]),
-               size = ifelse(is.na(plotLvl), 0.5,
+               plotLvl = ifelse(is.na(plotLvl), naLbl, plotLvl),
+               plotLvl = factor(plotLvl, levels = levels(labels)),
+               size = ifelse(plotLvl == naLbl, 0.5,
                              ifelse(plotLvl == "Clearcutting only", 2, 1.5)),
-               alpha = ifelse(is.na(plotLvl), 1, 1),
+               alpha = ifelse(plotLvl == naLbl, 1, 1),
                linetype =  linetype[match(fireScenario, names(linetype))])
     plotMean[grepl("full access", plotMean$plotLvl), "linetype"] <- 3
     
     plotRibbon <- plotMean %>%
-        filter(!is.na(plotLvl))
+        filter(plotLvl != naLbl)
     
     if(names(colList[i]) == "MS") {
       yLim <- c(0.12, 0.30)
@@ -148,10 +156,10 @@ for (i in seq_along(colList)) {
       group_by(id_ms) %>%
       filter(year == max(year)) %>%
       mutate(label = paste0("S", id_ms),
-             hjust = ifelse(is.na(plotLvl), -0.05, -0.05),
-             vjust = ifelse(is.na(plotLvl), -0.05, -0.05),
-             alpha = ifelse(is.na(plotLvl), 1, 1),
-             size = ifelse(is.na(plotLvl), 4, 6)) %>%
+             hjust = ifelse(plotLvl == naLbl, -0.05, -0.05),
+             vjust = ifelse(plotLvl == naLbl, -0.05, -0.05),
+             alpha = ifelse(plotLvl == naLbl, 1, 1),
+             size = ifelse(plotLvl == naLbl, 4, 6)) %>%
       ungroup() %>%
       mutate(regenFailureVulnMean = ifelse(year<max(year), yLim[2],
                                            regenFailureVulnMean)) %>%
@@ -170,6 +178,7 @@ for (i in seq_along(colList)) {
                   linetype = plotMean$linetype,
                   aes(colour = plotLvl)) +
         scale_colour_manual("",
+                            #labels = c(unique(plotMean$plotLvl), "RCP 8.5"),
                             values = cols, 
                             na.translate = T,
                             na.value = "black") +
@@ -191,18 +200,21 @@ for (i in seq_along(colList)) {
               legend.title=element_blank(),
               axis.text.x = element_text(angle = 45, hjust = 1),
               plot.subtitle = element_text(size = rel(.9)),
-              plot.caption = element_text(size = rel(.6), hjust = 1)) +
-        guides(colour = guide_legend(nrow = 5,
-                                     override.aes = list(size = c(rep(2, length(labels)), 0.5),
-                                                         alpha = c(rep(1, length(labels)), 1),
-                                                         linetype = c(ifelse(grepl("full access", labels), 3, 1),3))))
-               
+              plot.caption = element_text(size = rel(.6), hjust = 1)) 
     
+    if(names(colList)[[i]] == "MS") {
+      pMean <-  pMean +
+        guides(colour = guide_legend(nrow = 5,
+                                     override.aes = list(size = c(rep(2, length(sID)), 0.5),
+                                                         alpha = c(rep(1, length(sID)), 1),
+                                                         linetype = c(ifelse(grepl("full access", labels)|
+                                                                               labels == naLbl, 3, 1)))))
+    }
+
+ 
     if(names(colList)[[i]] == "SuppMat") {
       pMean <- pMean +
         theme(legend.position = "none")
-      # guides(colour = guide_legend(nrow = 3,
-      #                              override.aes = list(linetype =  c(rep(1,9), rep (3,6)))))
         
     }
     
@@ -217,7 +229,7 @@ for (i in seq_along(colList)) {
                     axis.text.x = element_text(angle = 45, hjust = 1, size = rel(1.5)),
                     axis.text.y = element_text(size = rel(1.5)),
                     axis.title = element_text(size = rel(1.5)),
-                    legend.text = element_text(size = rel(1.2)),
+                    legend.text = element_text(size = rel(0.9)),
                     legend.key.width = unit(1.5,"cm"),
                     plot.subtitle = element_text(size = rel(.9)),
                     plot.caption = element_text(size = rel(.75), hjust = 1)
